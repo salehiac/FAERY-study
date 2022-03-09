@@ -15,13 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from abc import ABC, abstractmethod
-import time
-
 import torch
 import numpy as np
-import random
-from scoop import futures
+
+from abc import ABC, abstractmethod
 
 
 class Agent(ABC):
@@ -41,26 +38,26 @@ class Agent(ABC):
     def __init__(self, idx):
         self._fitness = None
         self._behavior_descr = None
-        self._complete_trajs = None  #for debug and visualisation only
+        self._complete_trajs = None  # for debug and visualisation only
         self._nov = None
         self._idx = idx
 
         self._solved_task = False
         self._task_info = {
-        }  #it can be useful (e.g. for meta-world) to store information about the task that the agent has solved
-        #as tasks are randomly sampled at runtime
-        self._created_at_gen = -1  #to compute age
-        self._parent_idx = -1  #hacky way of computing bd distance between parent and child
-        self._root = -1  #to keep track of the root of an evolutionnary path
+        }  # it can be useful (e.g. for meta-world) to store information about the task that the agent has solved
+        # as tasks are randomly sampled at runtime
+        self._created_at_gen = -1  # to compute age
+        self._parent_idx = -1  # hacky way of computing bd distance between parent and child
+        self._root = -1  # to keep track of the root of an evolutionnary path
         self._bd_dist_to_parent_bd = -1
         self._age = -1
 
-        #only useful for meta-learning with MetaQDForSparseRewards
+        # only useful for meta-learning with MetaQDForSparseRewards
         self._useful_evolvability = 0
         self._mean_adaptation_speed = float("inf")
         self._adaptation_speed_lst = []
 
-        self._sum_of_model_params = None  #for debug
+        self._sum_of_model_params = None  # for debug
 
         self._last_eval_init_state = None
         self._first_action = None
@@ -68,7 +65,7 @@ class Agent(ABC):
     def reset_tracking_attrs(self):
         self._fitness = None
         self._behavior_descr = None
-        self._complete_trajs = None  #for debug and visualisation only
+        self._complete_trajs = None  # for debug and visualisation only
         self._nov = None
 
         self._solved_task = False
@@ -83,7 +80,7 @@ class Agent(ABC):
         self._mean_adaptation_speed = float("inf")
         self._adaptation_speed_lst = []
 
-        self._sum_of_model_params = None  #for debug
+        self._sum_of_model_params = None  # for debug
 
         self._last_eval_init_state = None
         self._first_action = None
@@ -224,5 +221,3 @@ class SmallFC_FW(torch.nn.Module, Agent):
 
     def get_genotype_len(self):
         return get_num_number_params(self, trainable_only=True)
-
-

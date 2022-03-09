@@ -16,27 +16,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import time
-import sys
 import os
 import copy
 import functools
 import random
-import pdb
-import numpy as np
 import gc
-
 import torch
-from scoop import futures
 import yaml
 import argparse
-from termcolor import colored
 
-import matplotlib.pyplot as plt
+from scoop import futures
+from termcolor import colored
 from deap import tools as deap_tools
 
 import Archives
 import NoveltyEstimators
-import BehaviorDescr
 import Agents
 import MiscUtils
 
@@ -61,7 +55,7 @@ class NoveltySearch:
             map_type="scoop",
             logs_root="/tmp/ns_log/",
             compute_parent_child_stats=False,
-            initial_pop=[],  #make sure they are passed by deepcopy
+            initial_pop=[],  # make sure they are passed by deepcopy
             problem_sampler=None):
         """
         archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
@@ -114,7 +108,8 @@ class NoveltySearch:
         self.n_offspring = n_offspring
         self.agent_factory = agent_factory
 
-        self.num_agent_instances = n_pop  #this is important for attributing _idx values to future agents
+        # this is important for attributing _idx values to future agents
+        self.num_agent_instances = n_pop
 
         if not len(initial_pop):
             print(
@@ -148,8 +143,8 @@ class NoveltySearch:
                 "Root dir for logs not found. Please ensure that it exists before launching the script."
             )
 
-        #for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
-        self.task_solvers = {}  #key,value=generation, list(agents)
+        # for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
+        self.task_solvers = {}  # key,value=generation, list(agents)
 
         self.compute_parent_child_stats = compute_parent_child_stats
 
@@ -160,7 +155,7 @@ class NoveltySearch:
         tt1 = time.time()
         xx = list(
             self._map(self.problem, agents)
-        )  #attention, don't deepcopy the problem instance. Use problem_sampler if necessary
+        )  # attention, don't deepcopy the problem instance. Use problem_sampler if necessary
         tt2 = time.time()
         elapsed = tt2 - tt1
         task_solvers = []
@@ -169,7 +164,8 @@ class NoveltySearch:
             ag._fitness = xx[ag_i][0]
             ag._behavior_descr = xx[ag_i][1]
             ag._solved_task = xx[ag_i][2]
-            ag._complete_trajs = xx[ag_i][3]  #for debug only, disable it later
+            # for debug only, disable it later
+            ag._complete_trajs = xx[ag_i][3]
             ag._last_eval_init_state = xx[ag_i][4]
             ag._last_eval_init_obs = xx[ag_i][5]
             ag._first_action = xx[ag_i][6]
@@ -204,24 +200,24 @@ class NoveltySearch:
 
             parents = copy.deepcopy(
                 self._initial_pop
-            )  #pop is a member in order to avoid passing copies to workers
+            )  # pop is a member in order to avoid passing copies to workers
             self.eval_agents(parents)
 
             self.nov_estimator.update(archive=[], pop=parents)
-            novs = self.nov_estimator()  #computes novelty of all population
+            novs = self.nov_estimator()  # computes novelty of all population
             for ag_i in range(len(parents)):
                 parents[ag_i]._nov = novs[ag_i]
 
             #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
             for it in range(iters):
-
+                print("Inner g : {}/{}".format(it, iters), end="\r")
 
                 offsprings = self.generate_new_agents(
                     parents, generation=it + 1
-                )  #mutations and crossover happen here  <<= deap can be useful here
+                )  # mutations and crossover happen here  <<= deap can be useful here
                 task_solvers, _ = self.eval_agents(offsprings)
 
-                pop = parents + offsprings  #all of them have _fitness and _behavior_descr now
+                pop = parents + offsprings  # all of them have _fitness and _behavior_descr now
 
                 for x in pop:
                     if x._age == -1:
@@ -231,15 +227,16 @@ class NoveltySearch:
 
                 self.nov_estimator.update(archive=self.archive, pop=pop)
                 novs = self.nov_estimator(
-                )  #computes novelty of all population
+                )  # computes novelty of all population
                 for ag_i in range(len(pop)):
                     pop[ag_i]._nov = novs[ag_i]
 
-                parents_next = self.selector(individuals=pop, fit_attr="_nov")
+                parents_next = self.selector(individuals=pop)
 
                 if self.compute_parent_child_stats:
                     for x in parents_next:
-                        if x._bd_dist_to_parent_bd == -1 and x._created_at_gen > 0:  #otherwise it has already been computed in a previous generation
+                        # otherwise it has already been computed in a previous generation
+                        if x._bd_dist_to_parent_bd == -1 and x._created_at_gen > 0:
                             xp = next(
                                 (s for s in pop if s._idx == x._parent_idx),
                                 None)
@@ -267,7 +264,6 @@ class NoveltySearch:
                     MiscUtils.dump_pickle(
                         self.log_dir_path + f"/population_gen_{it}", parents)
 
-
                 if len(task_solvers):
                     print(colored("[NS info] found task solvers (generation " +
                                   str(it) + ")",
@@ -280,9 +276,9 @@ class NoveltySearch:
                 gc.collect()
 
                 #tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
-                #tqdm_gen.refresh()
+                # tqdm_gen.refresh()
 
-            return parents, self.task_solvers  #iteration:list_of_agents
+            return parents, self.task_solvers  # iteration:list_of_agents
 
     def generate_new_agents(self, parents, generation: int):
 
@@ -290,12 +286,12 @@ class NoveltySearch:
                            for x in parents]
         parents_to_mutate = random.choices(
             range(len(parents_as_list)),
-            k=self.n_offspring)  #note that usually n_offspring>=len(parents)
+            k=self.n_offspring)  # note that usually n_offspring>=len(parents)
         mutated_genotype = [
             (parents_as_list[i][0],
              self.mutator(copy.deepcopy(parents_as_list[i][1])),
              parents_as_list[i][2]) for i in parents_to_mutate
-        ]  #deepcopy is because of deap
+        ]  # deepcopy is because of deap
 
         num_s = self.n_offspring if generation != 0 else len(parents_as_list)
 
@@ -332,7 +328,7 @@ class NoveltySearch:
 
 if __name__ == "__main__":
 
-    #please don't abuse the parser. Algorithmic params should be set in the yaml files
+    # please don't abuse the parser. Algorithmic params should be set in the yaml files
     parser = argparse.ArgumentParser(description='Novelty Search.')
     parser.add_argument('--config',
                         type=str,
@@ -341,8 +337,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--resume',
         type=str,
-        help=
-        "(unused, you can use other parts of the code) resume exectution from a checkpoint directory",
+        help="(unused, you can use other parts of the code) resume exectution from a checkpoint directory",
         default="")
 
     args = parser.parse_args()
@@ -354,7 +349,7 @@ if __name__ == "__main__":
         raise Exception("Either --config or --resume should be provided.")
 
     if len(args.config):
-        ### create ns component from yaml file
+        # create ns component from yaml file
         with open(args.config, "r") as fl:
             config = yaml.load(fl, Loader=yaml.FullLoader)
 
@@ -363,7 +358,7 @@ if __name__ == "__main__":
             max_steps = config["problem"]["max_steps"]
             bd_type = config["problem"]["bd_type"]
             assets = config["problem"]["assets"]
-            import HardMaze
+            import HardMaze as HardMaze
             problem = HardMaze.HardMaze(bd_type=bd_type,
                                         max_steps=max_steps,
                                         assets=assets)
@@ -387,9 +382,8 @@ if __name__ == "__main__":
             problem = MetaworldProblems.MetaWorldMT1(
                 bd_type=config["problem"]["bd_type"],
                 max_steps=-1,
-                display=False,  #ATTENTION: don't set it to True with scoop
+                display=False,  # ATTENTION: don't set it to True with scoop
                 assets={},
-                ML1_env_name=config["problem"]["env_conf"][0],
                 mode=config["problem"]["env_conf"][1])
         else:
             raise NotImplementedError("Problem type")
@@ -406,8 +400,8 @@ if __name__ == "__main__":
                 removal_strategy=config["archive"]["removal_strategy"])
         elif config["novelty_estimator"]["type"] == "learned":
             bd_dims = problem.get_bd_dims()
-            #embedding_dims=bd_dims
-            #embedding_dims=1
+            # embedding_dims=bd_dims
+            # embedding_dims=1
             embedding_dims = 2 * bd_dims
             nov_estimator = NoveltyEstimators.LearnedNovelty1d(
                 in_dim=bd_dims,
@@ -415,7 +409,7 @@ if __name__ == "__main__":
                 pb_limits=problem.get_behavior_space_boundaries())
             arch = None
 
-        #create selector
+        # create selector
         if config["selector"]["type"] == "elitist_with_thresh":
 
             selector = functools.partial(
@@ -425,7 +419,7 @@ if __name__ == "__main__":
             roulette_msg = "Usage currently not supported: it ends up chosing the same element many times, this duplicates agent._ids etc"
             roulette_msg += " fixing this bug is not a priority since selBest with thresholding actually works well"
             raise Exception(roulette_msg)
-            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
+            # selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
 
         elif config["selector"]["type"] == "nsga2_with_thresh":
 
@@ -447,7 +441,7 @@ if __name__ == "__main__":
         else:
             raise NotImplementedError("selector")
 
-        #create population
+        # create population
         in_dims = problem.dim_obs
         out_dims = problem.dim_act
         num_pop = config["hyperparams"]["population_size"]
@@ -462,7 +456,7 @@ if __name__ == "__main__":
                 hidden_dim = 10
             elif "metaworld-ml1" == config["problem"]["name"]:
                 normalise_output_with = "tanh"
-                num_hidden = 2  #SmallFC_FW actually adds another layer
+                num_hidden = 2  # SmallFC_FW actually adds another layer
                 hidden_dim = 50
 
             def make_ag(idx):
@@ -512,7 +506,7 @@ if __name__ == "__main__":
         else:
             raise NotImplementedError("mutation type")
 
-        #create NS
+        # create NS
         map_t = "scoop" if config["use_scoop"] else "std"
         visualise_bds = config["visualise_bds"]
 
@@ -537,12 +531,12 @@ if __name__ == "__main__":
             print(
                 "agents evaluated in ", elapsed_time, "seconds (map type == ",
                 map_t, ")"
-            )  
+            )
 
         MiscUtils.bash_command(
             ["cp", args.config, ns.log_dir_path + "/config.yaml"])
 
-        #do NS
+        # do NS
         stop_on_reaching_task = config["stop_when_task_solved"]
         nov_estimator.log_dir = ns.log_dir_path
         ns.disable_tqdm = config["disable_tqdm"]

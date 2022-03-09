@@ -18,24 +18,22 @@
 import subprocess
 import os
 import sys
-from datetime import datetime
-import functools
-import pdb
-import warnings
+
 import pickle
 import random
-
-import numpy as np
+import copy
 import torch
-import tqdm
-import cv2
-from functools import reduce
 import string
 
-import matplotlib.pyplot as plt
 import deap.creator
 import deap.base
 import deap.tools
+
+import numpy as np
+
+from datetime import datetime
+from functools import reduce
+
 
 sys.path.append("../")
 
@@ -152,9 +150,9 @@ class SmallEncoder1d(torch.nn.Module):
     def weights_to_rand(self, d=5):
         with torch.no_grad():
             for m in self.mds:
-                #m.weight.fill_(np.random.randn(m.weight.shape)*d)
-                #m.bias.fill_(np.random.randn(m.weight.shape)*d)
-                #pdb.set_trace()
+                # m.weight.fill_(np.random.randn(m.weight.shape)*d)
+                # m.bias.fill_(np.random.randn(m.weight.shape)*d)
+                # pdb.set_trace()
                 m.weight.data = torch.randn_like(m.weight.data) * d
                 m.bias.data = torch.randn_like(m.bias.data) * d
 
@@ -172,7 +170,7 @@ def selRoulette(individuals, k, fit_attr=None, automatic_threshold=True):
         individual_novs = list(
             map(lambda x: x if x > md else 0, individual_novs))
 
-    s_indx = np.argsort(individual_novs).tolist()[::-1]  #decreasing order
+    s_indx = np.argsort(individual_novs).tolist()[::-1]  # decreasing order
     sum_n = sum(individual_novs)
     chosen = []
     for i in range(k):
@@ -187,7 +185,7 @@ def selRoulette(individuals, k, fit_attr=None, automatic_threshold=True):
     return chosen
 
 
-def selBest(individuals, k, fit_attr=None, automatic_threshold=True):
+def selBest(individuals, k, automatic_threshold=True):
 
     individual_novs = [x._nov for x in individuals]
 
@@ -196,9 +194,15 @@ def selBest(individuals, k, fit_attr=None, automatic_threshold=True):
         individual_novs = list(
             map(lambda x: x if x > md else 0, individual_novs))
 
-    s_indx = np.argsort(individual_novs).tolist()[::-1]  #decreasing order
+    s_indx = np.argsort(individual_novs).tolist()[::-1]  # decreasing order
     return [individuals[i] for i in s_indx[:k]]
 
+
+### Deap sometimes creates problems with parallelism if those are not called in the global scope
+deap.creator.create("Fitness2d", deap.base.Fitness,
+                            weights=(1.0, 1.0,))
+deap.creator.create("LightIndividuals", list,
+                            fitness=deap.creator.Fitness2d, ind_i=-1)
 
 class NSGA2:
     """
@@ -206,13 +210,13 @@ class NSGA2:
     """
 
     def __init__(self, k):
-        #Deap sometimes creates problems with parallelism if those are not called in the __main__ script
-        #deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
-        #deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
+        # Deap sometimes creates problems with parallelism if those are not called in the __main__ script
+        # deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
+        # deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
 
         self.k = k
 
-    def __call__(self, individuals, fit_attr=None, automatic_threshold=False):
+    def __call__(self, individuals, automatic_threshold=False):
         individual_novs = [x._nov for x in individuals]
         if automatic_threshold:
             md = np.median(individual_novs)
@@ -261,7 +265,8 @@ def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):
         target = frozen(batch)
         pred = trained(batch)
         loss = ((target - pred)**2).sum(1)
-        loss = (loss.mean()).clone() * -1  #because we want networks to diverge
+        # because we want networks to diverge
+        loss = (loss.mean()).clone() * -1
 
         loss.backward()
         optimizer.step()

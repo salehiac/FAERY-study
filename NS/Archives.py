@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from abc import ABC, abstractmethod
 import random
-import numpy as np
 import pickle
-import pdb
+import numpy as np
+
+from abc import ABC, abstractmethod
 
 
 class Archive(ABC):
@@ -68,7 +68,7 @@ class ListArchive(Archive):
             candidates = [pop[i] for i in r[:self.growth_rate]]
         elif self.growth_strategy == "most_novel":
             sorted_pop = sorted(pop,
-                                key=lambda x: x._nov)[::-1]  #descending order
+                                key=lambda x: x._nov)[::-1]  # descending order
             candidates = sorted_pop[:self.growth_rate]
 
         candidates = [c for c in candidates if c._nov > thresh]

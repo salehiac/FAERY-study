@@ -15,19 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import torch
+import MiscUtils
+import numpy as np
+
 from abc import ABC, abstractmethod
 from sklearn.neighbors import KDTree
-import numpy as np
-import torch
-import pdb
-import random
-#import time
-#import sys
-#import os
-#import copy
-
-import matplotlib.pyplot as plt
-import MiscUtils
 
 
 class NoveltyEstimator(ABC):
@@ -42,8 +35,8 @@ class NoveltyEstimator(ABC):
         """
         pass
 
-        #getattr(_pop_bds[idx].
-        #setattr(_pop_bds[idx], novelty_attr)   etc etc
+        # getattr(_pop_bds[idx].
+        # setattr(_pop_bds[idx], novelty_attr)   etc etc
     @abstractmethod
     def update(self, pop, archive=None):
         pass
@@ -82,7 +75,7 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         returns novelties as unsorted list
         """
         dists, ids = self.kdt.query(self.pop_bds, self.k, return_distance=True)
-        #the first column is the point itself because the population itself is included in the kdtree
+        # the first column is the point itself because the population itself is included in the kdtree
         dists = dists[:, 1:]
         ids = ids[:, 1:]
 
@@ -101,9 +94,9 @@ class LearnedNovelty1d(NoveltyEstimator):
 
         self.frozen = MiscUtils.SmallEncoder1d(
             in_dim, emb_dim, num_hidden=3, non_lin="leaky_relu", use_bn=False
-        )  #note that using batchnorm wouldn't make any sense here as the results of the frozen network shouldn't change depending on batch
-        #self.frozen.weights_to_constant(1.0)
-        #self.frozen.weights_to_rand(d=0.2)
+        )  # note that using batchnorm wouldn't make any sense here as the results of the frozen network shouldn't change depending on batch
+        # self.frozen.weights_to_constant(1.0)
+        # self.frozen.weights_to_rand(d=0.2)
         self.frozen.eval()
 
         self.learnt = MiscUtils.SmallEncoder1d(in_dim,
@@ -137,14 +130,14 @@ class LearnedNovelty1d(NoveltyEstimator):
 
     def __call__(self):
 
-        #self.pop_bds is of size NxD with D the dimensions of the behavior space
+        # self.pop_bds is of size NxD with D the dimensions of the behavior space
         pop_novs = []
         for i in range(0, self.pop_bds.shape[0], self.batch_sz):
             batch = torch.Tensor(self.pop_bds[i:i + self.batch_sz])
-            #batch=batch/600
-            #batch=batch-0.5
+            # batch=batch/600
+            # batch=batch-0.5
             with torch.no_grad():
-                #pdb.set_trace()
+                # pdb.set_trace()
                 e_frozen = self.frozen(batch)
                 self.learnt.eval()
                 e_pred = self.learnt(batch)
@@ -170,12 +163,12 @@ class LearnedNovelty1d(NoveltyEstimator):
         for _ in range(3):
             for i in range(0, pop_bds.shape[0], self.batch_sz):
                 batch = torch.Tensor(pop_bds[i:i + self.batch_sz])
-                #batch=torch.Tensor(pop_bds[random.choices(range(len(self.pop)),k=(min(self.batch_sz,len(self.pop)))),:])
-                #pdb.set_trace()
-                #batch=torch.Tensor(pop_bds[])
-                #batch=batch/600
-                #batch=batch-0.5
-                #pdb.set_trace()
+                # batch=torch.Tensor(pop_bds[random.choices(range(len(self.pop)),k=(min(self.batch_sz,len(self.pop)))),:])
+                # pdb.set_trace()
+                # batch=torch.Tensor(pop_bds[])
+                # batch=batch/600
+                # batch=batch-0.5
+                # pdb.set_trace()
                 with torch.no_grad():
                     e_frozen = self.frozen(batch)
 
@@ -188,7 +181,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 weights = torch.Tensor([1.0 for x in range(batch.shape[0])])
                 loss = ll * weights
                 loss = loss.mean().clone()
-                #loss/=self.batch_sz
+                # loss/=self.batch_sz
                 if torch.isnan(loss).any():
                     raise Exception(
                         "loss is Nan. Maybe tray reducing the learning rate")

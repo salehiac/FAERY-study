@@ -15,25 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import copy
 import time
-import numpy as np
-import pdb
-import sys
-import os
 import random
 import gc
-
 import torch
-from scoop import futures
-from termcolor import colored
-
+import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import gym
+
 import metaworld
 import BehaviorDescr
-import MiscUtils
+
 from Problem import Problem
 
 
@@ -149,24 +140,24 @@ class MetaWorldMT1(Problem):
         self.mode = mode
 
         if ML10_obj is None:
-            #note: this is time-consuming, you should probably call that once for all environments, just like you do for ml10
+            # note: this is time-consuming, you should probably call that once for all environments, just like you do for ml10
             self.ml1 = metaworld.ML1(
                 self.ML_env_name
-            )  #constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
-            #will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
-            #So ml1.train_classes is going to be of lenght 1
+            )  # constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
+            # will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
+            # So ml1.train_classes is going to be of lenght 1
 
             if self.mode == "train":
                 self.env = self.ml1.train_classes[self.ML_env_name]()
                 self.task_id = np.random.randint(len(
                     self.ml1.train_tasks)) if task_id == -1 else task_id
-                self.task = self.ml1.train_tasks[self.task_id]  #changes goal
+                self.task = self.ml1.train_tasks[self.task_id]  # changes goal
                 self.env.set_task(self.task)  # Set task
             if self.mode == "test":
                 self.env = self.ml1.test_classes[self.ML_env_name]()
                 self.task_id = np.random.randint(len(
                     self.ml1.test_tasks)) if task_id == -1 else task_id
-                self.task = self.ml1.test_tasks[self.task_id]  #changes goal
+                self.task = self.ml1.test_tasks[self.task_id]  # changes goal
                 self.env.set_task(self.task)  # Set task
         else:
             self.ml10 = ML10_obj
@@ -188,32 +179,33 @@ class MetaWorldMT1(Problem):
                 self.env.set_task(self.task)  # Set task
 
         self.dim_obs = self.env.observation_space.shape[
-            0]  #in the latest versions of metaworld, it is 39
+            0]  # in the latest versions of metaworld, it is 39
         self.dim_act = self.env.action_space.shape[
-            0]  #should be 4 (end-effector position + grasping activation. there is no orientation)
+            0]  # should be 4 (end-effector position + grasping activation. there is no orientation)
         self.display = display
 
         self.max_steps = self.env.max_path_length
 
         self.bd_type = bd_type
-        if bd_type == "type_0":  #position only
+        if bd_type == "type_0":  # position only
             self.bd_extractor = BehaviorDescr.GenericBD(
-                dims=3, num=2)  #dims*num dimensional
-        elif bd_type == "type_1":  #position + gripper effector distances
+                dims=3, num=2)  # dims*num dimensional
+        elif bd_type == "type_1":  # position + gripper effector distances
             self.bd_extractor = BehaviorDescr.GenericBD(
-                dims=4, num=2)  #dims*num dimensional
-        elif bd_type == "type_2":  #position + gripper effector distances + whether gripper is opening or closing
+                dims=4, num=2)  # dims*num dimensional
+        elif bd_type == "type_2":  # position + gripper effector distances + whether gripper is opening or closing
             self.bd_extractor = BehaviorDescr.GenericBD(
-                dims=5, num=2)  #dims*num dimensional
+                dims=5, num=2)  # dims*num dimensional
         elif bd_type == "type_3":
             required_dims = self.env._get_pos_objects().shape[
-                0]  #in the current state of metaworld, this will either be 3 (for one object) or 6 (two objects)
+                0]  # in the current state of metaworld, this will either be 3 (for one object) or 6 (two objects)
             self.bd_extractor = BehaviorDescr.GenericBD(
                 dims=required_dims,
-                num=1)  #final position of manipulated objects
+                num=1)  # final position of manipulated objects
         else:
             raise Exception("Unkown bd type")
-        self.dist_thresh = 0.001  #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
+        # to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
+        self.dist_thresh = 0.001
         self.num_saved = 0
 
     def get_task_info(self):
@@ -224,7 +216,7 @@ class MetaWorldMT1(Problem):
         dct["mode"] = self.mode
         dct["behavior_descriptor_t"] = self.bd_type
         dct["task_id"] = self.task_id
-        #dct["global_seed"]=seed_
+        # dct["global_seed"]=seed_
         problem_consts = {}
         attrs = ["goal", "obj_init_pos", "obj_init_angle"]
         for att in attrs:
@@ -242,7 +234,7 @@ class MetaWorldMT1(Problem):
     def get_end_effector_pos(self):
 
         return self.env.get_endeff_pos(
-        )  #this is as far as I know the same as obs[:3]
+        )  # this is as far as I know the same as obs[:3]
 
     def get_gripper_openness(self):
         """
@@ -253,13 +245,13 @@ class MetaWorldMT1(Problem):
             'leftEndEffector')
         return np.linalg.norm(
             dist
-        )  #as far as I know this is obs[3]/10 (no idea why they multiply it by 10 in obs[3])
+        )  # as far as I know this is obs[3]/10 (no idea why they multiply it by 10 in obs[3])
 
     def action_normalisation(self):
         """
         returns a function that should be used as the last non-linearity in agents (to constrain actions in an expected interval). If identity, just return ""
         """
-        return "tanh"  #because self.action_space.high is +1, self.action_space.low is -1.
+        return "tanh"  # because self.action_space.high is +1, self.action_space.low is -1.
 
     def close(self):
         self.env.close()
@@ -281,13 +273,13 @@ class MetaWorldMT1(Problem):
         if forced_init_state is not None, self.env.reset() wont be called and the evaluation will start from forced_init_state.
         """
 
-        if hasattr(ag, "eval"):  #in case of torch agent
+        if hasattr(ag, "eval"):  # in case of torch agent
             ag.eval()
 
         if self.display:
             self.env.render()
 
-        with torch.no_grad():  #replace with generic context_magager
+        with torch.no_grad():  # replace with generic context_magager
 
             if forced_init_state is None:
                 obs = self.env.reset()
@@ -300,7 +292,7 @@ class MetaWorldMT1(Problem):
 
             init_state = self.env.get_env_state()
             init_obs = obs.copy()
-            #pdb.set_trace()
+            # pdb.set_trace()
             first_action = None
 
             fitness = 0
@@ -330,7 +322,7 @@ class MetaWorldMT1(Problem):
                 elif self.bd_type == "type_1":
                     behavior_hist.append(
                         obs[:4]
-                    )  #obs[3] is 10*get_gripper_openness(), let's go with that for now
+                    )  # obs[3] is 10*get_gripper_openness(), let's go with that for now
                 elif self.bd_type == "type_2":
                     closing_command = float(action[3] > 0)
                     beh = np.zeros(5)
@@ -338,10 +330,10 @@ class MetaWorldMT1(Problem):
                     beh[4] = closing_command
                     behavior_hist.append(beh)
                 elif self.bd_type == "type_3":
-                    #behavior_hist.append(self.env.get_body_com("obj"))
+                    # behavior_hist.append(self.env.get_body_com("obj"))
                     behavior_hist.append(
                         self.env._get_pos_objects()
-                    )  #this is like calling self.env.get_body_com("obj") or self.env.get_body_com("soccer_ball") etc
+                    )  # this is like calling self.env.get_body_com("obj") or self.env.get_body_com("soccer_ball") etc
 
                 diff_effpos = np.linalg.norm(self.get_end_effector_pos() -
                                              prev_eff_pos)
@@ -352,13 +344,13 @@ class MetaWorldMT1(Problem):
 
                 prev_eff_pos = self.get_end_effector_pos()
 
-                if seems_stuck > 80:  #don't set that number too low, since if it doesn't move but closes/opens the gripper it doesn't mena it's stuck
+                if seems_stuck > 80:  # don't set that number too low, since if it doesn't move but closes/opens the gripper it doesn't mena it's stuck
                     task_solved = False
                     done = True
 
                 fitness += reward
                 if info["success"]:
-                    task_solved = True  #if it is stuck but solves the task, it's okay
+                    task_solved = True  # if it is stuck but solves the task, it's okay
                     done = True
 
                 if done:
@@ -390,21 +382,21 @@ class MetaWorldMT1(Problem):
         ax = plt.axes(projection='3d', adjustable="box")
         color_population = "red"
         color_archive = "blue"
-        #color_closed_gripper="green"
-        #color_open_gripper="yellow"
+        # color_closed_gripper="green"
+        # color_open_gripper="yellow"
         for x in population:
             bd = x._behavior_descr
             bh = x._complete_trajs
             ax.plot3D(bh[:, 0], bh[:, 1], bh[:, 2], "k--")
             ax.scatter3D(bd[:, 0], bd[:, 1], bd[:, 2], c=color_population)
-            #ax.set_aspect('equal') #doesn't support the aspect argument....
+            # ax.set_aspect('equal') #doesn't support the aspect argument....
 
         for x in archive:
             bd_a = x._behavior_descr
             bh_a = x._complete_trajs
             ax.plot3D(bh_a[:, 0], bh_a[:, 1], bh_a[:, 2], "m--")
             ax.scatter3D(bd_a[:, 0], bd_a[:, 1], bd_a[:, 2], c=color_archive)
-            #ax.set_aspect('equal') #doesn't support the aspect argument....
+            # ax.set_aspect('equal') #doesn't support the aspect argument....
 
         if not quitely:
             plt.show()
