@@ -50,6 +50,7 @@ class ForSparseRewards(ABC):
                  num_test_samples,
                  agent_factory,
                  top_level_log_root="tmp/mqd_tmp/",
+                 name_prefix="meta-learning",
                  resume_from_gen={}):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on validation data, but on meta observations from the inner loop. So the
@@ -77,16 +78,17 @@ class ForSparseRewards(ABC):
         self.num_test_samples = num_test_samples
         self.agent_factory = agent_factory
         self.resume_from_gen = resume_from_gen
+        self.name_prefix = name_prefix
 
         if os.path.isdir(top_level_log_root):
             self.top_level_log = MiscUtils.create_directory_with_pid(
-                dir_basename=top_level_log_root + "/meta-learning_" +
+                dir_basename=top_level_log_root + "/{}_".format(name_prefix) +
                 MiscUtils.rand_string() + "_",
                 remove_if_exists=True,
                 no_pid=False)
             print(
                 colored(
-                    "[NS info] temporary dir for meta-learning was created: " +
+                    "[NS info] temporary dir for {} was created: ".format(name_prefix) +
                     self.top_level_log,
                     "blue",
                     attrs=[]))
@@ -231,7 +233,7 @@ class ForSparseRewards(ABC):
             str(current_index + self.starting_gen),
             evolution_table)
     
-    def __call__(self, disable_testing=False, test_first=False):
+    def __call__(self, disable_testing=False, test_first=False, save=True):
         """
         Outer loop of the meta algorithm
         """
@@ -272,12 +274,13 @@ class ForSparseRewards(ABC):
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
 
-                with open(
-                        self.top_level_log + "/population_prior_" +
-                        str(outer_g + self.starting_gen), "wb") as fl:
-                    pickle.dump(self.pop, fl)
+                if save is True:
+                    with open(
+                            self.top_level_log + "/population_prior_" +
+                            str(outer_g + self.starting_gen), "wb") as fl:
+                        pickle.dump(self.pop, fl)
 
-                self._save_evolution_table(evolution_table, "train", outer_g)
+                    self._save_evolution_table(evolution_table, "train", outer_g)
 
                 # reset evolvability and adaptation stats
                 for ind in self.pop:
@@ -304,8 +307,10 @@ class ForSparseRewards(ABC):
 
                 self._update_evolution_table(
                     test_metadata, test_evolution_table, idx_to_row_test, self.num_test_samples)
-                self._save_evolution_table(
-                    test_evolution_table, "test", outer_g)
+
+                if save is True:
+                    self._save_evolution_table(
+                        test_evolution_table, "test", outer_g)
 
     def test_population(self, population, in_problem):
         """

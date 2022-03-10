@@ -55,6 +55,99 @@ def _make_metaworld_ml1_ag(ag_idx):
     return agt
 
 
+def init_main(args_obj):
+    #  RESUMING
+    resume_dict = {}
+    if len(args_obj.resume):
+        print("resuming...")
+        pop_fn = args_obj.resume
+        with open(pop_fn, "rb") as fl:
+            resume_dict["init_pop"] = pickle.load(fl)
+        dig = [
+            x for x in pop_fn[pop_fn.find("population_prior"):]
+            if x.isdigit()
+        ]
+        dig = int(functools.reduce(lambda x, y: x + y, dig, ""))
+        resume_dict["gen"] = dig
+        print("loaded_init_pop...")
+
+        if args_obj.problem != "metaworld_ml10":
+            orig_cfg = functools.reduce(lambda x, y: x + "/" + y,
+                                        pop_fn.split("/")[:-1],
+                                        "") + "/experiment_config"
+            with open(orig_cfg, "r") as fl:
+                orig_tsk_name = json.load(fl)["task_name"]
+            resuming_from_str = orig_tsk_name + "_" + str(dig)
+    else:
+        resuming_from_str = ""
+
+    #  SETTING UP EXPERIMENTS
+    experiment_config = {
+        "pop_sz": args_obj.pop_size,
+        "off_sz": args_obj.off_size,
+        "num_train_samples": args_obj.nb_samples_train,
+        "num_test_samples": args_obj.nb_samples_test,
+        "g_outer": args_obj.outer_steps,
+        "g_inner": args_obj.inner_steps
+    }
+
+    # DIFFERENT SETTINGS FOR EACH ENV
+    if args_obj.problem == "random_mazes":
+
+        agent_factory = _make_2d_maze_ag
+        top_level_log_root = "tmp/NS_LOGS"
+
+        train_sampler = functools.partial(
+            HardMaze.sample_mazes,
+            G=args_obj.maze_size,
+            xml_template_path="../environments/env_assets/maze_template.xml",
+            tmp_dir="tmp/",
+            from_dataset=args_obj.path_train,
+            random_goals=False)
+
+        test_sampler = functools.partial(
+            HardMaze.sample_mazes,
+            G=args_obj.maze_size,
+            xml_template_path="../environments/env_assets/maze_template.xml",
+            tmp_dir="tmp/",
+            from_dataset=args_obj.path_test,
+            random_goals=False)
+
+        experiment_config["task_name"] = "maze{}x{}".format(
+            args_obj.maze_size, args_obj.maze_size)
+
+    elif args_obj.problem == "metaworld_ml1":
+
+        behavior_descr_type = "type_3"
+        agent_factory = _make_metaworld_ml1_ag
+        top_level_log_root = "tmp/META_LOGS_ML1/"
+
+        train_sampler = MetaworldProblems.SampleFromML1(
+            bd_type=behavior_descr_type, mode="train", task_name=args_obj.task_name)
+        test_sampler = MetaworldProblems.SampleFromML1(
+            bd_type=behavior_descr_type, mode="test", task_name=args_obj.task_name)
+
+        if args_obj.task_name not in metaworld.ML1.ENV_NAMES:
+            raise ValueError("--task_name not available for ML1")
+
+        experiment_config["task_name"] = args_obj.task_name
+
+    elif args_obj.problem == "metaworld_ml10":
+
+        behavior_descr_type = "type_3"
+        agent_factory = _make_metaworld_ml1_ag
+        top_level_log_root = "tmp/META_LOGS_ML10/"
+
+        experiment_config["ML10 called every outer loop"] = 1
+
+        train_sampler = MetaworldProblems.SampleSingleExampleFromML10(
+            bd_type=behavior_descr_type, mode="train")
+        test_sampler = MetaworldProblems.SampleSingleExampleFromML10(
+            bd_type=behavior_descr_type, mode="test")
+    
+    return train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='meta experiments')
@@ -124,128 +217,41 @@ if __name__ == "__main__":
         '--nb_samples_train',
         type=int,
         help="number of tasks for the training process",
-        default=50
+        default=25
     )
     parser.add_argument(
         '--nb_samples_test',
         type=int,
         help="number of tasks for the testing process",
-        default=50
+        default=25
     )
 
-    args = parser.parse_args()
-
-    #  RESUMING
-    resume_dict = {}
-    if len(args.resume):
-        print("resuming...")
-        pop_fn = args.resume
-        with open(pop_fn, "rb") as fl:
-            resume_dict["init_pop"] = pickle.load(fl)
-        dig = [
-            x for x in pop_fn[pop_fn.find("population_prior"):]
-            if x.isdigit()
-        ]
-        dig = int(functools.reduce(lambda x, y: x + y, dig, ""))
-        resume_dict["gen"] = dig
-        print("loaded_init_pop...")
-
-        if args.problem != "metaworld_ml10":
-            orig_cfg = functools.reduce(lambda x, y: x + "/" + y,
-                                        pop_fn.split("/")[:-1],
-                                        "") + "/experiment_config"
-            with open(orig_cfg, "r") as fl:
-                orig_tsk_name = json.load(fl)["task_name"]
-            resuming_from_str = orig_tsk_name + "_" + str(dig)
-    else:
-        resuming_from_str = ""
-
-    #  SETTING UP EXPERIMENTS
-    experiment_config = {
-        "pop_sz": args.pop_size,
-        "off_sz": args.off_size,
-        "num_train_samples": args.nb_samples_train,
-        "num_test_samples": args.nb_samples_test,
-        "g_outer": args.outer_steps,
-        "g_inner": args.inner_steps
-    }
-
-    # DIFFERENT SETTINGS FOR EACH ENV
-    if args.problem == "random_mazes":
-
-        agent_factory = _make_2d_maze_ag
-        top_level_log_root = "tmp/NS_LOGS"
-
-        train_sampler = functools.partial(
-            HardMaze.sample_mazes,
-            G=args.maze_size,
-            xml_template_path="../environments/env_assets/maze_template.xml",
-            tmp_dir="tmp/",
-            from_dataset=args.path_train,
-            random_goals=False)
-
-        test_sampler = functools.partial(
-            HardMaze.sample_mazes,
-            G=args.maze_size,
-            xml_template_path="../environments/env_assets/maze_template.xml",
-            tmp_dir="tmp/",
-            from_dataset=args.path_test,
-            random_goals=False)
-
-        experiment_config["task_name"] = "maze{}x{}".format(
-            args.maze_size, args.maze_size)
-
-    elif args.problem == "metaworld_ml1":
-
-        behavior_descr_type = "type_3"
-        agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/META_LOGS_ML1/"
-
-        train_sampler = MetaworldProblems.SampleFromML1(
-            bd_type=behavior_descr_type, mode="train", task_name=args.task_name)
-        test_sampler = MetaworldProblems.SampleFromML1(
-            bd_type=behavior_descr_type, mode="test", task_name=args.task_name)
-
-        if args.task_name not in metaworld.ML1.ENV_NAMES:
-            raise ValueError("--task_name not available for ML1")
-
-        experiment_config["task_name"] = args.task_name
-
-    elif args.problem == "metaworld_ml10":
-
-        behavior_descr_type = "type_3"
-        agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/META_LOGS_ML10/"
-
-        experiment_config["ML10 called every outer loop"] = 1
-
-        train_sampler = MetaworldProblems.SampleSingleExampleFromML10(
-            bd_type=behavior_descr_type, mode="train")
-        test_sampler = MetaworldProblems.SampleSingleExampleFromML10(
-            bd_type=behavior_descr_type, mode="test")
+    args_obj = parser.parse_args()
+    
+    train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config = init_main(args_obj)
 
     #  STARTING UP THE ALGORITHM
-    algo = MetaQDForSparseRewards(pop_sz=args.pop_size,
-                                  off_sz=args.off_size,
-                                  G_outer=args.outer_steps,
-                                  G_inner=args.inner_steps,
+    algo = MetaQDForSparseRewards(pop_sz=args_obj.pop_size,
+                                  off_sz=args_obj.off_size,
+                                  G_outer=args_obj.outer_steps,
+                                  G_inner=args_obj.inner_steps,
                                   train_sampler=train_sampler,
                                   test_sampler=test_sampler,
-                                  num_train_samples=args.nb_samples_train,
-                                  num_test_samples=args.nb_samples_test,
+                                  num_train_samples=args_obj.nb_samples_train,
+                                  num_test_samples=args_obj.nb_samples_test,
                                   agent_factory=agent_factory,
                                   top_level_log_root=top_level_log_root,
                                   resume_from_gen=resume_dict)
 
     # Test algorithm
-    # algo = NSForSparseRewards(pop_sz=args.pop_size,
-    #                           off_sz=args.off_size,
-    #                           G_outer=args.outer_steps,
-    #                           G_inner=args.inner_steps,
+    # algo = NSForSparseRewards(pop_sz=args_obj.pop_size,
+    #                           off_sz=args_obj.off_size,
+    #                           G_outer=args_obj.outer_steps,
+    #                           G_inner=args_obj.inner_steps,
     #                           train_sampler=train_sampler,
     #                           test_sampler=test_sampler,
-    #                           num_train_samples=args.nb_samples_train,
-    #                           num_test_samples=args.nb_samples_test,
+    #                           num_train_samples=args_obj.nb_samples_train,
+    #                           num_test_samples=args_obj.nb_samples_test,
     #                           agent_factory=agent_factory,
     #                           top_level_log_root=top_level_log_root,
     #                           resume_from_gen=resume_dict)

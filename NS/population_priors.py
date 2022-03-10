@@ -34,7 +34,7 @@ class MetaQDForSparseRewards(ForSparseRewards):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, name_prefix="FAERY", **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,
@@ -73,7 +73,7 @@ class NSForSparseRewards(ForSparseRewards):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, name_prefix="NS", **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,

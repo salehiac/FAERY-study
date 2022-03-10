@@ -24,35 +24,29 @@ import torch
 
 from scoop import futures
 from termcolor import colored
+from abc import ABC, abstractmethod
 
 import MiscUtils
 
 
-class NoveltySearch:
-
-    BD_VIS_DISABLE = 0
-    BD_VIS_TO_FILE = 1
-    BD_VIS_DISPLAY = 2
+class InnerAlgorithm(ABC):
+    """
+    Base skeleton for the inner loop algorithm
+    """
 
     def __init__(
             self,
-            archive,
-            nov_estimator,
             mutator,
             problem,
-            selector,
             n_pop,
             n_offspring,
             agent_factory,
-            visualise_bds_flag,
             map_type="scoop",
             logs_root="/tmp/ns_log/",
             compute_parent_child_stats=False,
             initial_pop=[],  # make sure they are passed by deepcopy
             problem_sampler=None):
         """
-        archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
-        nov_estimator                NoveltyEstimator  object implementing the NoveltyEstimator interface. 
         problem                      Problem           None, or object that provides 
                                                             - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
                                                             - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
@@ -60,8 +54,6 @@ class NoveltySearch:
                                                               when updating the archive.
                                                            - optionally, a visualise_bds function.
                                                         When problem_sampler is not None, problem should be set to None.
-        mutator                      Mutator
-        selector                     function
         n_pop                        int 
         n_offspring                  int           
         agent_factory                function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
@@ -69,8 +61,6 @@ class NoveltySearch:
                                                            - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
                                                            - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
                                                        This is just to facilitate interactions with the deap library
-        visualise_bds_flag           int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to 
-                                                       the logs dir.
                                                        possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
         map_type                     string            different options for sequential/parallel mapping functions. supported values currently are 
                                                        "scoop" distributed map from futures.map
@@ -80,11 +70,7 @@ class NoveltySearch:
         initial_pop                  lst               if a prior on the population exists, it should be supplied here. ATTENTION: it should NOT be passed by ref
         problem_sampler              function          problem_sampler(num_samples=n) should return n instances of the problem 
         """
-        self.archive = archive
-        if archive is not None:
-            self.archive.reset()
 
-        self.nov_estimator = nov_estimator
         self.problem = problem
 
         if problem_sampler is not None:
@@ -93,10 +79,8 @@ class NoveltySearch:
 
         self.map_type = map_type
         self._map = futures.map if map_type == "scoop" else map
-        #print(colored("[NS info] Using map_type "+map_type, "green",attrs=["bold"]))
 
         self.mutator = mutator
-        self.selector = selector
 
         self.n_offspring = n_offspring
         self.agent_factory = agent_factory
@@ -122,8 +106,6 @@ class NoveltySearch:
         assert n_offspring >= len(
             initial_pop), "n_offspring should be larger or equal to n_pop"
 
-        self.visualise_bds_flag = visualise_bds_flag
-
         if os.path.isdir(logs_root):
             self.logs_root = logs_root
             self.log_dir_path = MiscUtils.create_directory_with_pid(
@@ -141,16 +123,48 @@ class NoveltySearch:
 
         self.compute_parent_child_stats = compute_parent_child_stats
 
-        self.save_archive_to_file = True
-        self.disable_tqdm = False
+    def generate_new_agents(self, parents, generation: int):
+
+        parents_as_list = [(x._idx, x.get_flattened_weights(), x._root) for x in parents]
+
+        mutated_genotype = [
+            (
+                parents_as_list[i][0],
+                self.mutator(copy.deepcopy(parents_as_list[i][1])),
+                parents_as_list[i][2]
+             ) for i in random.choices(range(len(parents_as_list)), k=self.n_offspring)
+        ]  # deepcopy is because of deap; note that usually n_offspring>=len(parents)
+
+
+        num_s = self.n_offspring if generation != 0 else len(parents_as_list)
+
+        mutated_ags = [
+            self.agent_factory(self.num_agent_instances + x)
+            for x in range(num_s)
+        ]
+
+        kept = random.sample(range(len(mutated_genotype)), k=num_s)
+        for i in range(len(kept)):
+            mutated_ags[i]._parent_idx = mutated_genotype[kept[i]][0]
+            mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
+            mutated_ags[i]._created_at_gen = generation
+            mutated_ags[i]._root = mutated_genotype[kept[i]][2]
+
+        self.num_agent_instances += len(mutated_ags)
+
+        for x in mutated_ags:
+            x.eval()
+
+        return mutated_ags
 
     def eval_agents(self, agents):
+
         tt1 = time.time()
         xx = list(
             self._map(self.problem, agents)
         )  # attention, don't deepcopy the problem instance. Use problem_sampler if necessary
-        tt2 = time.time()
-        elapsed = tt2 - tt1
+        elapsed = time.time() - tt1
+
         task_solvers = []
         for ag_i in range(len(agents)):
             ag = agents[ag_i]
@@ -171,6 +185,7 @@ class NoveltySearch:
 
         return task_solvers, elapsed
 
+    @abstractmethod
     def __call__(self,
                  iters,
                  stop_on_reaching_task=True,
@@ -191,23 +206,13 @@ class NoveltySearch:
             if reinit and self.archive is not None:
                 self.archive.reset()
 
-            parents = copy.deepcopy(
-                self._initial_pop
-            )  # pop is a member in order to avoid passing copies to workers
+            parents = copy.deepcopy(self._initial_pop)  # pop is a member in order to avoid passing copies to workers
             self.eval_agents(parents)
 
-            self.nov_estimator.update(archive=[], pop=parents)
-            novs = self.nov_estimator()  # computes novelty of all population
-            for ag_i in range(len(parents)):
-                parents[ag_i]._nov = novs[ag_i]
-
-            #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
             for it in range(iters):
                 print("Inner g : {}/{}".format(it, iters), end="\r")
 
-                offsprings = self.generate_new_agents(
-                    parents, generation=it + 1
-                )  # mutations and crossover happen here  <<= deap can be useful here
+                offsprings = self.generate_new_agents(parents, generation=it+1)  # mutations and crossover happen here
                 task_solvers, _ = self.eval_agents(offsprings)
 
                 pop = parents + offsprings  # all of them have _fitness and _behavior_descr now
@@ -217,12 +222,6 @@ class NoveltySearch:
                         x._age = it + 1 - x._created_at_gen
                     else:
                         x._age += 1
-
-                self.nov_estimator.update(archive=self.archive, pop=pop)
-                novs = self.nov_estimator(
-                )  # computes novelty of all population
-                for ag_i in range(len(pop)):
-                    pop[ag_i]._nov = novs[ag_i]
 
                 parents_next = self.selector(individuals=pop)
 
@@ -272,48 +271,3 @@ class NoveltySearch:
                 # tqdm_gen.refresh()
 
             return parents, self.task_solvers  # iteration:list_of_agents
-
-    def generate_new_agents(self, parents, generation: int):
-
-        parents_as_list = [(x._idx, x.get_flattened_weights(), x._root)
-                           for x in parents]
-        parents_to_mutate = random.choices(
-            range(len(parents_as_list)),
-            k=self.n_offspring)  # note that usually n_offspring>=len(parents)
-        mutated_genotype = [
-            (parents_as_list[i][0],
-             self.mutator(copy.deepcopy(parents_as_list[i][1])),
-             parents_as_list[i][2]) for i in parents_to_mutate
-        ]  # deepcopy is because of deap
-
-        num_s = self.n_offspring if generation != 0 else len(parents_as_list)
-
-        mutated_ags = [
-            self.agent_factory(self.num_agent_instances + x)
-            for x in range(num_s)
-        ]
-        kept = random.sample(range(len(mutated_genotype)), k=num_s)
-        for i in range(len(kept)):
-            mutated_ags[i]._parent_idx = mutated_genotype[kept[i]][0]
-            mutated_ags[i].set_flattened_weights(
-                mutated_genotype[kept[i]][1][0])
-            mutated_ags[i]._created_at_gen = generation
-            mutated_ags[i]._root = mutated_genotype[kept[i]][2]
-
-        self.num_agent_instances += len(mutated_ags)
-
-        for x in mutated_ags:
-            x.eval()
-
-        return mutated_ags
-
-    def visualise_bds(self, agents, generation_num=-1):
-
-        if self.visualise_bds_flag != NoveltySearch.BD_VIS_DISABLE:  # and it%10==0:
-            q_flag = True if self.visualise_bds_flag == NoveltySearch.BD_VIS_TO_FILE else False
-            archive_it = iter(self.archive) if self.archive is not None else []
-            self.problem.visualise_bds(archive_it,
-                                       agents,
-                                       quitely=q_flag,
-                                       save_to=self.log_dir_path,
-                                       generation_num=generation_num)
