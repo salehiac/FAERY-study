@@ -4,22 +4,31 @@ import functools
 
 from deap import tools as deap_tools
 
+import utils_misc as utils_misc
+
 from main import init_main
-from ForSparseRewards import ForSparseRewards
-from population_priors import NSForSparseRewards
+from class_sparse_rewards import ForSparseRewards
 
 
-class NSOneTask(NSForSparseRewards):
+class NSOneTask(ForSparseRewards):
     """
     Running NS on tasks, without any meta learning
     """
 
     def __init__(self, *args, name_prefix="NS_one", **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, name_prefix=name_prefix, **kwargs)
 
+        self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
+                                         eta=10,
+                                         low=-1.0,
+                                         up=1.0,
+                                         indpb=0.1)
+
+
+        self.inner_selector = functools.partial(utils_misc.selBest,
+                                                k = 2 * self.pop_sz)
+        
         # Running NS a single time
-        self.num_test_samples = 10
-        self.num_train_samples = 10
         self.G_outer = 1
     
     def _meta_learning(self, metadata, tmp_pop):
@@ -47,20 +56,11 @@ class RandomOneTask(ForSparseRewards):
                                          up=1.0,
                                          indpb=0.1)
 
-        self.inner_selector = random.choices
+        self.inner_selector = functools.partial(deap_tools.selRandom,
+                                                k = 2 * self.pop_sz)
 
         # Running with random pop a single time
-        self.num_test_samples = 10
-        self.num_train_samples = 10
         self.G_outer = 1
-    
-    def inner_selector(self, individuals, automatic_threshold=False):
-        """
-        Randomly selection among the population
-        """
-
-        return random.choices(individuals, k=self.pop_sz)
-
     
     def _meta_learning(self, metadata, tmp_pop):
         """
@@ -142,13 +142,13 @@ if __name__=="__main__":
         '--nb_samples_train',
         type=int,
         help="number of tasks for the training process",
-        default=25
+        default=50
     )
     parser.add_argument(
         '--nb_samples_test',
         type=int,
         help="number of tasks for the testing process",
-        default=25
+        default=50
     )
     parser.add_argument(
         '--algo',

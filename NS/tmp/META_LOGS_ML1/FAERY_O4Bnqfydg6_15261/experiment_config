@@ -1,0 +1,1 @@
+{"pop_sz": 40, "off_sz": 40, "num_train_samples": 25, "num_test_samples": 25, "g_outer": 50, "g_inner": 200, "task_name": "assembly-v2"}

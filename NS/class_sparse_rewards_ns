@@ -1,0 +1,33 @@
+import functools
+import random
+import numpy as np
+import deap.tools as deap_tools
+
+import utils_misc
+from class_sparse_rewards import ForSparseRewards
+
+
+class NSForSparseRewards(ForSparseRewards):
+    """
+    Simple NS algorithm applied to Multi-Tasks
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name_prefix="NS", **kwargs)
+
+        self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
+                                         eta=10,
+                                         low=-1.0,
+                                         up=1.0,
+                                         indpb=0.1)
+
+        self.inner_selector = functools.partial(utils_misc.selBest,
+                                                k=2 * self.pop_sz)
+
+    def _meta_learning(self, metadata, tmp_pop):
+        """
+        Meta learning algorithm for simple NS
+        """
+
+        sols_lst = list(set(np.concatenate([m[2] for m in metadata])))
+        self.pop = random.choices(sols_lst, k=self.pop_sz)

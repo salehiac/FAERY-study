@@ -22,18 +22,18 @@ import argparse
 import pickle
 import metaworld
 
-import Agents
-import HardMaze
-import MetaworldProblems
+import class_agent
+import class_problem_hard_maze
+import class_problem_metaworld
 
-from population_priors import MetaQDForSparseRewards, NSForSparseRewards
+from class_sparse_rewards_faery import FAERYNS, FAERYQD, FAERYRANDOM
 
 
 def _make_2d_maze_ag(ag_idx):
     """
     because scoop only likes top-level functions/objects...
     """
-    agt = Agents.SmallFC_FW(ag_idx,
+    agt = class_agent.SmallFC_FW(ag_idx,
                             in_d=5,
                             out_d=2,
                             num_hidden=3,
@@ -46,7 +46,7 @@ def _make_metaworld_ml1_ag(ag_idx):
     """
     because scoop only likes top-level functions/objects...
     """
-    agt = Agents.SmallFC_FW(ag_idx,
+    agt = class_agent.SmallFC_FW(ag_idx,
                             in_d=39,
                             out_d=4,
                             num_hidden=1,
@@ -98,7 +98,7 @@ def init_main(args_obj):
         top_level_log_root = "tmp/NS_LOGS"
 
         train_sampler = functools.partial(
-            HardMaze.sample_mazes,
+            class_problem_hard_maze.sample_mazes,
             G=args_obj.maze_size,
             xml_template_path="../environments/env_assets/maze_template.xml",
             tmp_dir="tmp/",
@@ -106,7 +106,7 @@ def init_main(args_obj):
             random_goals=False)
 
         test_sampler = functools.partial(
-            HardMaze.sample_mazes,
+            class_problem_hard_maze.sample_mazes,
             G=args_obj.maze_size,
             xml_template_path="../environments/env_assets/maze_template.xml",
             tmp_dir="tmp/",
@@ -122,9 +122,9 @@ def init_main(args_obj):
         agent_factory = _make_metaworld_ml1_ag
         top_level_log_root = "tmp/META_LOGS_ML1/"
 
-        train_sampler = MetaworldProblems.SampleFromML1(
+        train_sampler = class_problem_metaworld.SampleFromML1(
             bd_type=behavior_descr_type, mode="train", task_name=args_obj.task_name)
-        test_sampler = MetaworldProblems.SampleFromML1(
+        test_sampler = class_problem_metaworld.SampleFromML1(
             bd_type=behavior_descr_type, mode="test", task_name=args_obj.task_name)
 
         if args_obj.task_name not in metaworld.ML1.ENV_NAMES:
@@ -140,9 +140,9 @@ def init_main(args_obj):
 
         experiment_config["ML10 called every outer loop"] = 1
 
-        train_sampler = MetaworldProblems.SampleSingleExampleFromML10(
+        train_sampler = class_problem_metaworld.SampleSingleExampleFromML10(
             bd_type=behavior_descr_type, mode="train")
-        test_sampler = MetaworldProblems.SampleSingleExampleFromML10(
+        test_sampler = class_problem_metaworld.SampleSingleExampleFromML10(
             bd_type=behavior_descr_type, mode="test")
     
     return train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config
@@ -225,36 +225,37 @@ if __name__ == "__main__":
         help="number of tasks for the testing process",
         default=25
     )
+    parser.add_argument(
+        "--inner_algorithm",
+        type=str,
+        help="the inner algorithm to use (QD, NS, RANDOM)",
+        default="NS"
+    )
 
     args_obj = parser.parse_args()
     
     train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config = init_main(args_obj)
 
     #  STARTING UP THE ALGORITHM
-    algo = MetaQDForSparseRewards(pop_sz=args_obj.pop_size,
-                                  off_sz=args_obj.off_size,
-                                  G_outer=args_obj.outer_steps,
-                                  G_inner=args_obj.inner_steps,
-                                  train_sampler=train_sampler,
-                                  test_sampler=test_sampler,
-                                  num_train_samples=args_obj.nb_samples_train,
-                                  num_test_samples=args_obj.nb_samples_test,
-                                  agent_factory=agent_factory,
-                                  top_level_log_root=top_level_log_root,
-                                  resume_from_gen=resume_dict)
+    if args_obj.inner_algorithm.lower() == "qd":
+        algo_obj = FAERYQD
+    elif args_obj.inner_algorithm.lower() == "ns":
+        algo_obj = FAERYNS
+    else:
+        algo_obj = FAERYRANDOM
 
-    # Test algorithm
-    # algo = NSForSparseRewards(pop_sz=args_obj.pop_size,
-    #                           off_sz=args_obj.off_size,
-    #                           G_outer=args_obj.outer_steps,
-    #                           G_inner=args_obj.inner_steps,
-    #                           train_sampler=train_sampler,
-    #                           test_sampler=test_sampler,
-    #                           num_train_samples=args_obj.nb_samples_train,
-    #                           num_test_samples=args_obj.nb_samples_test,
-    #                           agent_factory=agent_factory,
-    #                           top_level_log_root=top_level_log_root,
-    #                           resume_from_gen=resume_dict)
+    algo = algo_obj(pop_sz=args_obj.pop_size,
+                    off_sz=args_obj.off_size,
+                    G_outer=args_obj.outer_steps,
+                    G_inner=args_obj.inner_steps,
+                    train_sampler=train_sampler,
+                    test_sampler=test_sampler,
+                    num_train_samples=args_obj.nb_samples_train,
+                    num_test_samples=args_obj.nb_samples_test,
+                    agent_factory=agent_factory,
+                    top_level_log_root=top_level_log_root,
+                    resume_from_gen=resume_dict)
+                    
 
     with open(algo.top_level_log + "/experiment_config", "w") as fl:
         json.dump(experiment_config, fl)

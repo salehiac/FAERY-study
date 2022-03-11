@@ -26,10 +26,10 @@ import matplotlib.pyplot as plt
 
 from termcolor import colored
 
-import BehaviorDescr
-import MiscUtils
+import class_behavior_descr
+import utils_misc
 
-from Problem import Problem
+from class_problem import Problem
 
 sys.path.append("..")
 import environments.maze_generator.maze_generator as maze_generator
@@ -52,9 +52,9 @@ def sample_mazes(G,
 
     if not from_dataset:
         if os.path.isdir(tmp_dir):
-            dir_path = MiscUtils.create_directory_with_pid(
+            dir_path = utils_misc.create_directory_with_pid(
                 dir_basename=tmp_dir + "/maze_generation_" +
-                MiscUtils.rand_string() + "_",
+                utils_misc.rand_string() + "_",
                 remove_if_exists=True,
                 no_pid=False)
             print(
@@ -87,7 +87,7 @@ def sample_mazes(G,
         else:
             maze_gen.generate()
             fl_n = maze_gen.save(dir_path)
-        tmp_xml, err, ret_code = MiscUtils.bash_command(
+        tmp_xml, err, ret_code = utils_misc.bash_command(
             ["sed", "s#pbm_name_here#" + fl_n + "#g", xml_template_path])
         tmp_xml = tmp_xml.decode("utf-8")
         if random_goals:  # currently only upper left or upper right
@@ -130,7 +130,7 @@ class HardMaze(Problem):
         super().__init__()
 
         if len(assets) > 1:
-            rand_str = MiscUtils.rand_string(alpha=True,
+            rand_str = utils_misc.rand_string(alpha=True,
                                              numerical=False) + "-v1"
             gym_fastsim.register(
                 id=rand_str,
@@ -157,14 +157,14 @@ class HardMaze(Problem):
 
         self.bd_type = bd_type
         if bd_type == "generic":
-            self.bd_extractor = BehaviorDescr.GenericBD(
+            self.bd_extractor = class_behavior_descr.GenericBD(
                 dims=2, num=1
             )  # dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
             # (norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
             self.dist_thresh = 1
             # in order for x to be considerd novel
         elif bd_type == "learned_frozen":
-            self.bd_extractor = BehaviorDescr.FrozenEncoderBased()
+            self.bd_extractor = class_behavior_descr.FrozenEncoderBased()
             self.dist_thresh = 1
         elif bd_type == "engineered":
             raise NotImplementedError("not implemented- engineered bds")
@@ -246,7 +246,7 @@ class HardMaze(Problem):
             ended = True
 
         bd = None
-        if isinstance(self.bd_extractor, BehaviorDescr.GenericBD):
+        if isinstance(self.bd_extractor, class_behavior_descr.GenericBD):
             bd = self.bd_extractor.extract_behavior(
                 np.array(behavior_info).reshape(len(behavior_info),
                                                 len(behavior_info[0])))
@@ -289,11 +289,11 @@ class HardMaze(Problem):
 
         for pt_i in range(z.shape[0]):
             if pt_i < len(arch_l):  # archive individuals
-                color = MiscUtils.colors.blue
+                color = utils_misc.colors.blue
                 thickness = -1
             else:  # population individuals
                 # pdb.set_trace()
-                color = MiscUtils.colors.green
+                color = utils_misc.colors.green
                 thickness = -1
                 # thickness=-1
             # if uu[pt_i]._nov > mean_nov:
@@ -308,7 +308,7 @@ class HardMaze(Problem):
             maze_im, (int(z[len(arch_l) + most_novel_individual_in_pop, 0]),
                       int(z[len(arch_l) + most_novel_individual_in_pop, 1])),
             3,
-            color=MiscUtils.colors.red,
+            color=utils_misc.colors.red,
             thickness=-1)
 
         goal = self.env.map.get_goals()[0]

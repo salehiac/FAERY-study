@@ -1,9 +1,10 @@
 import random
 import copy
 
-import NS
-import Archives
-import NoveltyEstimators
+import class_archive
+import class_novelty_estimators
+
+from class_novelty_search import NoveltySearch
 
 
 def _mutate_initial_prior_pop(parents, mutator, agent_factory):
@@ -72,13 +73,13 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
     population_size = len(population)
     offsprings_size = population_size
 
-    nov_estimator = NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
-    arch = Archives.ListArchive(max_size=5000,
+    nov_estimator = class_novelty_estimators.ArchiveBasedNoveltyEstimator(k=15)
+    arch = class_archive.ListArchive(max_size=5000,
                                 growth_rate=6,
                                 growth_strategy="random",
                                 removal_strategy="random")
 
-    ns = NS.NoveltySearch(
+    ns = NoveltySearch(
         archive=arch,
         nov_estimator=nov_estimator,
         mutator=mutator,

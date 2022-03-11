@@ -23,9 +23,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import metaworld
-import BehaviorDescr
+import class_behavior_descr
 
-from Problem import Problem
+from class_problem import Problem
 
 
 class SampleFromML1:
@@ -35,20 +35,16 @@ class SampleFromML1:
         self.mode = mode
         self.task_name = task_name
 
-    def __call__(self, num_samples):
-        """
-        num_samples is here for historical reasons, but it's not longer used as we now always have num_samples==1 
-        """
+    def __call__(self, num_samples=1):
 
-        mt1_i = MetaWorldMT1(bd_type=self.bd_type,
+        return [MetaWorldMT1(bd_type=self.bd_type,
                              max_steps=-1,
                              display=False,
                              assets={},
                              ML_env_name=self.task_name,
                              mode=self.mode,
                              task_id=-1)
-        samples = [mt1_i]
-        return samples
+                for _ in range(num_samples)]
 
 
 class SampleSingleExampleFromML10:
@@ -188,18 +184,18 @@ class MetaWorldMT1(Problem):
 
         self.bd_type = bd_type
         if bd_type == "type_0":  # position only
-            self.bd_extractor = BehaviorDescr.GenericBD(
+            self.bd_extractor = class_behavior_descr.GenericBD(
                 dims=3, num=2)  # dims*num dimensional
         elif bd_type == "type_1":  # position + gripper effector distances
-            self.bd_extractor = BehaviorDescr.GenericBD(
+            self.bd_extractor = class_behavior_descr.GenericBD(
                 dims=4, num=2)  # dims*num dimensional
         elif bd_type == "type_2":  # position + gripper effector distances + whether gripper is opening or closing
-            self.bd_extractor = BehaviorDescr.GenericBD(
+            self.bd_extractor = class_behavior_descr.GenericBD(
                 dims=5, num=2)  # dims*num dimensional
         elif bd_type == "type_3":
             required_dims = self.env._get_pos_objects().shape[
                 0]  # in the current state of metaworld, this will either be 3 (for one object) or 6 (two objects)
-            self.bd_extractor = BehaviorDescr.GenericBD(
+            self.bd_extractor = class_behavior_descr.GenericBD(
                 dims=required_dims,
                 num=1)  # final position of manipulated objects
         else:

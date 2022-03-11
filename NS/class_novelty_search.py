@@ -25,7 +25,7 @@ import torch
 from scoop import futures
 from termcolor import colored
 
-import MiscUtils
+import utils_misc
 
 
 class NoveltySearch:
@@ -126,8 +126,8 @@ class NoveltySearch:
 
         if os.path.isdir(logs_root):
             self.logs_root = logs_root
-            self.log_dir_path = MiscUtils.create_directory_with_pid(
-                dir_basename=logs_root + "/NS_log_" + MiscUtils.rand_string() +
+            self.log_dir_path = utils_misc.create_directory_with_pid(
+                dir_basename=logs_root + "/NS_log_" + utils_misc.rand_string() +
                 "_",
                 remove_if_exists=True,
                 no_pid=False)
@@ -254,7 +254,7 @@ class NoveltySearch:
                     self.visualise_bds(
                         parents + [x for x in offsprings if x._solved_task],
                         generation_num=it)
-                    MiscUtils.dump_pickle(
+                    utils_misc.dump_pickle(
                         self.log_dir_path + f"/population_gen_{it}", parents)
 
                 if len(task_solvers):

@@ -15,26 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import functools
-import random
 import deap
-
-import numpy as np
+import functools
 
 from deap import tools as deap_tools
 
-import MiscUtils
+import utils_misc
 
-from ForSparseRewards import ForSparseRewards
+from class_sparse_rewards import ForSparseRewards
 
 
-class MetaQDForSparseRewards(ForSparseRewards):
+class FAERY(ForSparseRewards):
     """
     FAERY algorithm
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, name_prefix="FAERY", **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,
@@ -42,8 +39,7 @@ class MetaQDForSparseRewards(ForSparseRewards):
                                          up=1.0,
                                          indpb=0.1)
 
-        self.NSGA2 = MiscUtils.NSGA2(k=15)
-        self.inner_selector = self.NSGA2
+        self.inner_selector = None # To be set depending on used inner algorithm
 
     def _meta_learning(self, metadata, tmp_pop):
         """
@@ -67,27 +63,37 @@ class MetaQDForSparseRewards(ForSparseRewards):
         self.pop = [tmp_pop[u] for u in chosen_inds]
 
 
-class NSForSparseRewards(ForSparseRewards):
+class FAERYQD(FAERY):
     """
-    Simple NS algorithm applied to Multi-Tasks
+    FAERY applied on QD algorithms
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, name_prefix="NS", **kwargs)
+        super().__init__(*args, name_prefix="FAERY_QD", **kwargs)
 
-        self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
-                                         eta=10,
-                                         low=-1.0,
-                                         up=1.0,
-                                         indpb=0.1)
+        self.NSGA2 = utils_misc.NSGA2(k=15)
+        self.inner_selector = self.NSGA2
 
-        self.inner_selector = functools.partial(MiscUtils.selBest,
+
+class FAERYNS(FAERY):
+    """
+    FAERY applied on NS algorithms
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name_prefix="FAERY_NS", **kwargs)
+
+        self.inner_selector = functools.partial(utils_misc.selBest,
                                                 k=2 * self.pop_sz)
 
-    def _meta_learning(self, metadata, tmp_pop):
-        """
-        Meta learning algorithm for simple NS
-        """
 
-        sols_lst = list(set(np.concatenate([m[2] for m in metadata])))
-        self.pop = random.choices(sols_lst, k=self.pop_sz)
+class FAERYRANDOM(FAERY):
+    """
+    FAERY applied on RANDOM algorithms
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name_prefix="FAERY_NS", **kwargs)
+
+        self.inner_selector = functools.partial(deap_tools.selRandom,
+                                                k = 2 * self.pop_sz)

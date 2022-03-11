@@ -16,11 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import torch
-import MiscUtils
 import numpy as np
 
 from abc import ABC, abstractmethod
 from sklearn.neighbors import KDTree
+
+import utils_misc
 
 
 class NoveltyEstimator(ABC):
@@ -92,14 +93,14 @@ class LearnedNovelty1d(NoveltyEstimator):
                  batch_sz=128,
                  log_dir="/tmp/"):
 
-        self.frozen = MiscUtils.SmallEncoder1d(
+        self.frozen = utils_misc.SmallEncoder1d(
             in_dim, emb_dim, num_hidden=3, non_lin="leaky_relu", use_bn=False
         )  # note that using batchnorm wouldn't make any sense here as the results of the frozen network shouldn't change depending on batch
         # self.frozen.weights_to_constant(1.0)
         # self.frozen.weights_to_rand(d=0.2)
         self.frozen.eval()
 
-        self.learnt = MiscUtils.SmallEncoder1d(in_dim,
+        self.learnt = utils_misc.SmallEncoder1d(in_dim,
                                                emb_dim,
                                                num_hidden=5,
                                                non_lin="leaky_relu",
@@ -116,7 +117,7 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.log_dir = log_dir
 
         if pb_limits is not None:
-            MiscUtils.make_networks_divergent(self.frozen,
+            utils_misc.make_networks_divergent(self.frozen,
                                               self.learnt,
                                               pb_limits,
                                               iters=50)

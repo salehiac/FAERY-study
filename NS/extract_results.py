@@ -1,6 +1,6 @@
-from email.mime import base
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 filerange = range(1, 9)
 start, end = 0, 119

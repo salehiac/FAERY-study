@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from curses import meta
 import os
 import pickle
 import metaworld
@@ -25,12 +24,13 @@ from abc import ABC, abstractmethod
 from termcolor import colored
 from scoop import futures
 
-import NS
-import Archives
-import NoveltyEstimators
-import MiscUtils
-import MetaworldProblems
+import class_archive
+import class_novelty_estimators
+import utils_misc
+import class_problem_metaworld
 
+
+from class_novelty_search import NoveltySearch
 from utils_sparse_rewards import _mutate_initial_prior_pop, _mutate_prior_pop, ns_instance
 
 
@@ -81,9 +81,9 @@ class ForSparseRewards(ABC):
         self.name_prefix = name_prefix
 
         if os.path.isdir(top_level_log_root):
-            self.top_level_log = MiscUtils.create_directory_with_pid(
+            self.top_level_log = utils_misc.create_directory_with_pid(
                 dir_basename=top_level_log_root + "/{}_".format(name_prefix) +
-                MiscUtils.rand_string() + "_",
+                utils_misc.rand_string() + "_",
                 remove_if_exists=True,
                 no_pid=False)
             print(
@@ -255,13 +255,13 @@ class ForSparseRewards(ABC):
             idx_to_row = {tmp_pop[i]._idx: i for i in range(len(tmp_pop))}
 
             if isinstance(self.train_sampler,
-                          MetaworldProblems.SampleSingleExampleFromML10):
+                          class_problem_metaworld.SampleSingleExampleFromML10):
                 ml10obj = metaworld.ML10()
 
             if not test_first:
 
                 if isinstance(self.train_sampler,
-                              MetaworldProblems.SampleSingleExampleFromML10):
+                              class_problem_metaworld.SampleSingleExampleFromML10):
 
                     self.train_sampler.set_ml10obj(ml10obj)
 
@@ -300,7 +300,7 @@ class ForSparseRewards(ABC):
                 }
 
                 if isinstance(self.test_sampler,
-                              MetaworldProblems.SampleSingleExampleFromML10):
+                              class_problem_metaworld.SampleSingleExampleFromML10):
                     self.test_sampler.set_ml10obj(ml10obj)
 
                 test_metadata = self._get_metadata(self.pop, "test")
@@ -322,13 +322,13 @@ class ForSparseRewards(ABC):
         population_size = len(population)
         offsprings_size = population_size
 
-        nov_estimator = NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
-        arch = Archives.ListArchive(max_size=5000,
+        nov_estimator = class_novelty_estimators.ArchiveBasedNoveltyEstimator(k=15)
+        arch = class_archive.ListArchive(max_size=5000,
                                     growth_rate=6,
                                     growth_strategy="random",
                                     removal_strategy="random")
 
-        ns = NS.NoveltySearch(
+        ns = NoveltySearch(
             archive=arch,
             nov_estimator=nov_estimator,
             mutator=self.mutator,
