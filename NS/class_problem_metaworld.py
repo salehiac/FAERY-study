@@ -26,7 +26,7 @@ import metaworld
 import class_behavior_descr
 
 from class_problem import Problem
-
+from class_env_multitask import MultiTaskEnv
 
 class SampleFromML1:
 
@@ -104,7 +104,8 @@ class MetaWorldMT1(Problem):
                  ML_env_name="pick-place-v2",
                  mode="train",
                  task_id=-1,
-                 ML10_obj=None):
+                 ML10_obj=None,
+                 nb_tasks=1):
         """
         bd_type        The idea is that it fosters exploration related to the task, for now it doesn't matter if it isn't 
                        optimal. Currently those types are available: (noting N the number of samples)
@@ -143,18 +144,17 @@ class MetaWorldMT1(Problem):
             # will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
             # So ml1.train_classes is going to be of lenght 1
 
-            if self.mode == "train":
-                self.env = self.ml1.train_classes[self.ML_env_name]()
+            list_sample_task = self.ml1.train_classes if self.mode == "train" else self.ml1.test_classes
+
+            if nb_tasks == 1:           
+                self.env = list_sample_task[self.ML_env_name]()
                 self.task_id = np.random.randint(len(
-                    self.ml1.train_tasks)) if task_id == -1 else task_id
-                self.task = self.ml1.train_tasks[self.task_id]  # changes goal
+                    list_sample_task)) if task_id == -1 else task_id
+                self.task = list_sample_task[self.task_id]  # changes goal
                 self.env.set_task(self.task)  # Set task
-            if self.mode == "test":
-                self.env = self.ml1.test_classes[self.ML_env_name]()
-                self.task_id = np.random.randint(len(
-                    self.ml1.test_tasks)) if task_id == -1 else task_id
-                self.task = self.ml1.test_tasks[self.task_id]  # changes goal
-                self.env.set_task(self.task)  # Set task
+            else:
+                self.env = MultiTaskEnv(list_sample_task, nb_tasks)
+
         else:
             self.ml10 = ML10_obj
             if self.mode == "train":
@@ -174,11 +174,16 @@ class MetaWorldMT1(Problem):
                 self.task_id = self.ml10.test_tasks.index(self.task)
                 self.env.set_task(self.task)  # Set task
 
-        self.dim_obs = self.env.observation_space.shape[
-            0]  # in the latest versions of metaworld, it is 39
-        self.dim_act = self.env.action_space.shape[
-            0]  # should be 4 (end-effector position + grasping activation. there is no orientation)
-        self.display = display
+        if nb_tasks == 1:
+            self.dim_obs = self.env.observation_space.shape[
+                0]  # in the latest versions of metaworld, it is 39
+            self.dim_act = self.env.action_space.shape[
+                0]  # should be 4 (end-effector position + grasping activation. there is no orientation)
+            self.display = display
+        else:
+            self.dim_obs = self.env.dim_obs
+            self.dim_act = self.env.dim_act
+            self.display = False
 
         self.max_steps = self.env.max_path_length
 
@@ -237,7 +242,7 @@ class MetaWorldMT1(Problem):
         attention, this returns 0.1*obs[3]
         """
 
-        dist = env._get_site_pos('rightEndEffector') - env._get_site_pos(
+        dist = self.env._get_site_pos('rightEndEffector') - self.env._get_site_pos(
             'leftEndEffector')
         return np.linalg.norm(
             dist

@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-filerange = range(1, 9)
-start, end = 0, 119
-path, basename = "../data backup/", "meta-learning_QD_{}"
-title = "Performances de FAERY sur 120x200 steps\nmoyenne sur 10 tâches"
+filerange = ["NS","QD","RANDOM"]
+start, end = 0, 74
+path, basename = "../data backup/FAERY/", "FAERY_{}_1"
+title = "Performances de FAERY appliqué à {} sur 75x200 steps\nmoyenne sur 25 tâches"
 colors = {"train": ("dodgerblue", "lightblue"), "test": ("indianred", "pink")}
 
-save_basename = "Results_qd_{}"
+save_basename = "Results_{}"
 
 for k_fig in filerange:
     
@@ -24,7 +24,9 @@ for k_fig in filerange:
                 with np.load(filename, 'rb') as data:
                     arr = np.array(list(data.values())[0])
             except FileNotFoundError:
-                continue
+                if prefix == "test":
+                    continue
+                raise FileNotFoundError("Cannot find the file:", filename)
 
             solved, list_min = 0, []
             for line in arr.T:
@@ -41,13 +43,13 @@ for k_fig in filerange:
 
         list_avg_adapt = np.array(list_avg_adapt)
         list_std_adapt = np.array(list_std_adapt)
-
-        x_prop = range(len(list_prop_solved)) if prefix == "train" else range(0, 120, 10)
+        
+        x_prop = range(len(list_prop_solved)) if prefix == "train" else range(start, end+1, 10)
         axs[0].plot(x_prop, list_prop_solved,
                     color=colors[prefix][0], label=prefix)
         axs[1].plot(x_prop, list_avg_adapt, color=colors[prefix][0], label=prefix)
         axs[1].fill_between(x_prop, list_avg_adapt + list_std_adapt,
-                            list_avg_adapt - list_std_adapt, color=colors[prefix][1])
+                            [max(val, 0) for val in list_avg_adapt - list_std_adapt], color=colors[prefix][1])
 
         axs[0].set_xlabel("Generation")
         axs[0].set_ylabel("% of solved environments")
@@ -60,6 +62,6 @@ for k_fig in filerange:
         axs[1].grid(True)
         axs[1].legend()
 
-    plt.suptitle(title)
+    plt.suptitle(title.format(k_fig))
 
     plt.savefig("../data backup/Images/{}.png".format(save_basename.format(k_fig)))

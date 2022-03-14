@@ -31,7 +31,13 @@ class FAERY(ForSparseRewards):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
+        try:
+            name_prefix = kwargs["name_prefix"]
+        except KeyError:
+            name_prefix = "FAERY"
+
+        super().__init__(*args, name_prefix=name_prefix, **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,
@@ -40,6 +46,13 @@ class FAERY(ForSparseRewards):
                                          indpb=0.1)
 
         self.inner_selector = None # To be set depending on used inner algorithm
+    
+    def _get_meta_objectives(self, ind):
+        """
+        Returns the meta-scores of a given individual
+        """
+
+        return [ind._userful_evolvability, -1 * ind._mean_adaptation_speed]
 
     def _meta_learning(self, metadata, tmp_pop):
         """
@@ -50,11 +63,8 @@ class FAERY(ForSparseRewards):
         for i in range(len(tmp_pop)):
             light_pop.append(deap.creator.LightIndividuals())
             light_pop[-1].fitness.setValues(
-                [
-                    tmp_pop[i]._useful_evolvability,
-                    -1 * (tmp_pop[i]._mean_adaptation_speed)
-                ]
-            )  # the -1 factor is because we want to minimise that speed
+                self._get_meta_objectives(tmp_pop[i])
+            )
             light_pop[-1].ind_i = i
 
         chosen_inds = [x.ind_i for x in deap.tools.selNSGA2(light_pop,
@@ -73,6 +83,22 @@ class FAERYQD(FAERY):
 
         self.NSGA2 = utils_misc.NSGA2(k=15)
         self.inner_selector = self.NSGA2
+
+
+class FAERYQD_Ablation(FAERYQD):
+    """
+    FAERY applied on QD, ablation study object
+    """
+
+    def __init__(self, *args, objective_to_ignore=0, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+        self.objective_to_ignore = objective_to_ignore
+    
+    def _get_meta_objectives(self, ind):
+        score = super()._get_meta_objectives(ind)
+        score[self.objective_to_ignore] = 0
+        return score
 
 
 class FAERYNS(FAERY):

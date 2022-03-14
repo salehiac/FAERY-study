@@ -256,7 +256,7 @@ if __name__ == "__main__":
                     top_level_log_root=top_level_log_root,
                     resume_from_gen=resume_dict)
                     
-
+                    
     with open(algo.top_level_log + "/experiment_config", "w") as fl:
         json.dump(experiment_config, fl)
 
