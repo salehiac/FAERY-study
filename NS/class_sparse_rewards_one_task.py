@@ -5,7 +5,7 @@ from deap import tools as deap_tools
 
 import utils_misc as utils_misc
 
-from main import init_main
+from utils_main import init_main, get_parser
 from class_sparse_rewards import ForSparseRewards
 
 
@@ -74,81 +74,8 @@ class RandomOneTask(ForSparseRewards):
 
 if __name__=="__main__":
 
-    parser = argparse.ArgumentParser(description='meta experiments')
-
-    parser.add_argument(
-        "--problem",
-        type=str,
-        help="metaworld_ml1, metaworld_ml10, random_mazes",
-        default="metaworld_ml1"
-    )
-    parser.add_argument(
-        '--resume',
-        type=str,
-        help="path to a file population_prior_i with i a generation number",
-        default=""
-    )
-    parser.add_argument(
-        '--path_train',
-        type=str,
-        help="path where *xml and associated *bpm files for training can be found (see ../environments/mazegenerator)",
-        default=""
-    )
-    parser.add_argument(
-        '--path_test',
-        type=str,
-        help="path where *xml and associated *bpm files for testing can be found (see ../environments/mazegenerator)",
-        default=""
-    )
-    parser.add_argument(
-        '--maze_size',
-        type=int,
-        help="size of the maze (8 or 10)",
-        default=8
-    )
-    parser.add_argument(
-        '--task_name',
-        type=str,
-        help="task name for metaworld_ml1 (has to be in metaworld.ML1.ENV_NAMES",
-        default="assembly-v2"
-    )
-
-    parser.add_argument(
-        '--pop_size',
-        type=int,
-        help="size of the inner loop's population",
-        default=40
-    )
-    parser.add_argument(
-        '--off_size',
-        type=int,
-        help="size of the inner loop's offspring population",
-        default=40
-    )
-    parser.add_argument(
-        '--outer_steps',
-        type=int,
-        help="number of steps for the outer loop",
-        default=50
-    )
-    parser.add_argument(
-        '--inner_steps',
-        type=int,
-        help="number of steps for the inner loop",
-        default=200
-    )
-    parser.add_argument(
-        '--nb_samples_train',
-        type=int,
-        help="number of tasks for the training process",
-        default=50
-    )
-    parser.add_argument(
-        '--nb_samples_test',
-        type=int,
-        help="number of tasks for the testing process",
-        default=50
-    )
+    parser = get_parser()
+    
     parser.add_argument(
         '--algo',
         type=str,

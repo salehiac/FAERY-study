@@ -17,6 +17,7 @@
 
 import deap
 import functools
+import numpy as np
 
 from deap import tools as deap_tools
 
@@ -30,14 +31,12 @@ class FAERY(ForSparseRewards):
     FAERY algorithm
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, save_scores=False, **kwargs):
+        
+        if "name_prefix" not in kwargs.keys():
+            kwargs["name_prefix"] = "FAERY"
 
-        try:
-            name_prefix = kwargs["name_prefix"]
-        except KeyError:
-            name_prefix = "FAERY"
-
-        super().__init__(*args, name_prefix=name_prefix, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,
@@ -46,6 +45,8 @@ class FAERY(ForSparseRewards):
                                          indpb=0.1)
 
         self.inner_selector = None # To be set depending on used inner algorithm
+
+        self.save_scores = save_scores
     
     def _get_meta_objectives(self, ind):
         """
@@ -53,7 +54,7 @@ class FAERY(ForSparseRewards):
         """
 
         return [ind._userful_evolvability, -1 * ind._mean_adaptation_speed]
-
+    
     def _meta_learning(self, metadata, tmp_pop):
         """
         Meta learning algorithm for FAERY
@@ -72,6 +73,23 @@ class FAERY(ForSparseRewards):
                                                             nd="standard")]
         self.pop = [tmp_pop[u] for u in chosen_inds]
 
+    def _save_meta_objectives(self, tmp_pop, current_index, type_run):
+        """
+        Saves the meta objectives of the whole population
+        """
+
+        np.savez_compressed(
+            "{}/meta-scores_{}_{}".format(self.top_level_log, type_run,
+                                          str(current_index + self.starting_gen)),
+            np.array([FAERY._get_meta_objectives(ind) for ind in tmp_pop])
+        )
+
+    def _make_evolution_table(self, metadata, tmp_pop, current_index, type_run="train", save=True):
+        super()._make_evolution_table(metadata, tmp_pop, current_index, type_run, save)
+        
+        if self.save_scores is True:
+            self._save_meta_objectives(tmp_pop, current_index, type_run)
+
 
 class FAERYQD(FAERY):
     """
@@ -83,22 +101,6 @@ class FAERYQD(FAERY):
 
         self.NSGA2 = utils_misc.NSGA2(k=15)
         self.inner_selector = self.NSGA2
-
-
-class FAERYQD_Ablation(FAERYQD):
-    """
-    FAERY applied on QD, ablation study object
-    """
-
-    def __init__(self, *args, objective_to_ignore=0, **kwargs):
-        super().__init__(*args, **kwargs)
-    
-        self.objective_to_ignore = objective_to_ignore
-    
-    def _get_meta_objectives(self, ind):
-        score = super()._get_meta_objectives(ind)
-        score[self.objective_to_ignore] = 0
-        return score
 
 
 class FAERYNS(FAERY):

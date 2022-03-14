@@ -14,8 +14,8 @@ class MultiTaskEnv:
 
         self.max_path_length = self.envs[0].max_path_length
 
-        self.done = [False for _ in range(nb_tasks)]
-        self.info_success = [False for _ in range(nb_tasks)]
+        self.done = self.nb_tasks * [False]
+        self.info_success = self.nb_tasks * [False]
 
         # Useless
         self.goal = None
@@ -41,7 +41,9 @@ class MultiTaskEnv:
     def close(self):
         for env in self.envs:   env.close()
     
-    def reset(self):        
+    def reset(self):
+        self.done = self.nb_tasks * [False]
+        self.info_success = self.nb_tasks * [False]
         return np.concatenate([env.reset() for env in self.envs])
 
     def _get_obs(self):
@@ -64,7 +66,7 @@ class MultiTaskEnv:
                 reward += reward_it
                 self.done[i] = done_it or (info_it["success"] is True)
 
-        return obs, reward, all(self.done), False
+        return obs, reward, all(self.done), {"success":False}
     
     def set_env_state(self, state):
         raise NotImplementedError

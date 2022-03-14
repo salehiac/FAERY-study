@@ -9,6 +9,7 @@ import class_problem_metaworld
 from class_sparse_rewards import ForSparseRewards
 from utils_sparse_rewards import ns_instance
 
+
 class MetaNS(ForSparseRewards):
     """
     Simple NS algorithm applied to Multi-Tasks
@@ -16,12 +17,10 @@ class MetaNS(ForSparseRewards):
 
     def __init__(self, *args, **kwargs):
 
-        try:
-            name_prefix = kwargs["name_prefix"]
-        except KeyError:
-            name_prefix = "NS"
+        if "name_prefix" not in kwargs.keys():
+            kwargs["name_prefix"] = "NS"
 
-        super().__init__(*args, name_prefix=name_prefix, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.mutator = functools.partial(deap_tools.mutPolynomialBounded,
                                          eta=10,
@@ -64,30 +63,16 @@ class MultiTaskNS(MetaNS):
             sampler = self.test_sampler
             nb_samples = self.num_test_samples
 
-        metadata =  ns_instance(
-                
-                    sampler
-
-                ,  # sampler
-                
-                    [x for x in pop]
-                    
-                ,  # population
-                
-                    self.mutator
-
-                ,  # mutator
-
-                    self.inner_selector
-
-                ,  # inner_selector
-                
-                    self.agent_factory
-                    
-                ,  # make_ag
-                
-                    self.G_inner
-
-                )  # G_inner
-
+        metadata = ns_instance(
+            sampler,  # sampler
+            [x for x in pop],  # population
+            self.mutator,  # mutator
+            self.inner_selector,  # inner_selector
+            self.agent_factory,  # make_ag
+            self.G_inner    # G_inner
+        )
+        
         return metadata
+    
+    def _make_evolution_table(self, metadata, tmp_pop, current_index, type_run="train", save=True):
+        return super()._make_evolution_table(metadata, tmp_pop, current_index, type_run, save)

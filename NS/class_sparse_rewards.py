@@ -194,15 +194,16 @@ class ForSparseRewards(ABC):
 
         return None
 
-    def _update_evolution_table(self, metadata, evolution_table, idx_to_row, samples, tmp_pop=None):
+    def _update_evolution_table(self, metadata, evolution_table, idx_to_row, tmp_pop=None, type_run="train"):
         """
-        Updates the action table
+        Updates the evolution table
         """
 
         if tmp_pop is not None:
             idx_to_individual = {x._idx: x for x in tmp_pop}
-
-        for pb_i in range(self.num_train_samples):
+        
+        nb_samples = self.num_train_samples if type_run=="train" else self.num_test_samples
+        for pb_i in range(nb_samples):
             rt_i = metadata[pb_i][0]  # roots
             d_i = metadata[pb_i][1]  # depths
 
@@ -233,6 +234,26 @@ class ForSparseRewards(ABC):
             str(current_index + self.starting_gen),
             evolution_table)
     
+    def _make_evolution_table(self, metadata, tmp_pop, current_index, type_run="train", save=True):
+        """
+        Make and saves the evolution table from the given metadata
+        """
+
+        if type_run == "train":
+            # evolution_table[i,j]=k means that agent i solves env j after k mutations
+            evolution_table = -1 * np.ones([len(tmp_pop), self.num_train_samples])  
+            idx_to_row = {tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
+        elif type_run == "test":
+            evolution_table = -1 * np.ones([self.pop_sz, self.num_test_samples])
+            idx_to_row = {self.pop[i]._idx:i for i in range(len(self.pop))}
+        else:
+            raise ValueError("Unknown type of run")
+        
+        self._update_evolution_table(metadata, evolution_table, idx_to_row, tmp_pop, type_run)
+
+        if save is True:
+            self._save_evolution_table(evolution_table, type_run, current_index)
+
     def __call__(self, disable_testing=False, test_first=False, save=True):
         """
         Outer loop of the meta algorithm
@@ -249,11 +270,6 @@ class ForSparseRewards(ABC):
 
             tmp_pop = self._get_offspring()
 
-            evolution_table = -1 * np.ones(
-                [len(tmp_pop), self.num_train_samples]
-            )  # evolution_table[i,j]=k means that agent i solves env j after k mutations
-            idx_to_row = {tmp_pop[i]._idx: i for i in range(len(tmp_pop))}
-
             if isinstance(self.train_sampler,
                           class_problem_metaworld.SampleSingleExampleFromML10):
                 ml10obj = metaworld.ML10()
@@ -268,19 +284,16 @@ class ForSparseRewards(ABC):
                 # [roots, depths, populations]
                 metadata = self._get_metadata(tmp_pop, "train")
 
-                self._update_evolution_table(
-                    metadata, evolution_table, idx_to_row, self.num_train_samples, tmp_pop)
-
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
 
-                if save is True:
-                    with open(
-                            self.top_level_log + "/population_prior_" +
-                            str(outer_g + self.starting_gen), "wb") as fl:
-                        pickle.dump(self.pop, fl)
+                self._make_evolution_table(metadata, tmp_pop, outer_g, 'train', save)
 
-                    self._save_evolution_table(evolution_table, "train", outer_g)
+                # if save is True:
+                #     with open(
+                #             self.top_level_log + "/population_prior_" +
+                #             str(outer_g + self.starting_gen), "wb") as fl:
+                #         pickle.dump(self.pop, fl)
 
                 # reset evolvability and adaptation stats
                 for ind in self.pop:
@@ -292,25 +305,13 @@ class ForSparseRewards(ABC):
 
                 test_first = False
 
-                test_evolution_table = -1 * np.ones(
-                    [self.pop_sz, self.num_test_samples])
-                idx_to_row_test = {
-                    self.pop[i]._idx: i
-                    for i in range(len(self.pop))
-                }
-
                 if isinstance(self.test_sampler,
                               class_problem_metaworld.SampleSingleExampleFromML10):
                     self.test_sampler.set_ml10obj(ml10obj)
 
-                test_metadata = self._get_metadata(self.pop, "test")
-
-                self._update_evolution_table(
-                    test_metadata, test_evolution_table, idx_to_row_test, self.num_test_samples)
-
-                if save is True:
-                    self._save_evolution_table(
-                        test_evolution_table, "test", outer_g)
+                metadata = self._get_metadata(self.pop, "test")
+                
+                self._make_evolution_table(metadata, None, outer_g, "test", save)
 
     def test_population(self, population, in_problem):
         """
