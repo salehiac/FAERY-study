@@ -1,4 +1,5 @@
 import json
+import numpy as np
 
 from utils_main import init_main, get_parser
 from class_sparse_rewards_faery import FAERYQD
@@ -18,6 +19,17 @@ class FAERYQD_Ablation(FAERYQD):
         score = super()._get_meta_objectives(ind)
         score[self.objective_to_ignore] = 0
         return score
+    
+    def _save_meta_objectives(self, tmp_pop, current_index, type_run):
+        """
+        Saves the meta objectives of the whole population
+        """
+
+        np.savez_compressed(
+            "{}/meta-scores_{}_{}".format(self.top_level_log, type_run,
+                                          str(current_index + self.starting_gen)),
+            np.array([FAERYQD._get_meta_objectives(self, ind) for ind in tmp_pop])
+        )
 
 
 if __name__=="__main__":

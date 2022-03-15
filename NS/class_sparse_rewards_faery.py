@@ -53,7 +53,7 @@ class FAERY(ForSparseRewards):
         Returns the meta-scores of a given individual
         """
 
-        return [ind._userful_evolvability, -1 * ind._mean_adaptation_speed]
+        return [ind._useful_evolvability, -1 * ind._mean_adaptation_speed]
     
     def _meta_learning(self, metadata, tmp_pop):
         """
@@ -81,13 +81,13 @@ class FAERY(ForSparseRewards):
         np.savez_compressed(
             "{}/meta-scores_{}_{}".format(self.top_level_log, type_run,
                                           str(current_index + self.starting_gen)),
-            np.array([FAERY._get_meta_objectives(ind) for ind in tmp_pop])
+            np.array([self._get_meta_objectives(ind) for ind in tmp_pop])
         )
 
     def _make_evolution_table(self, metadata, tmp_pop, current_index, type_run="train", save=True):
         super()._make_evolution_table(metadata, tmp_pop, current_index, type_run, save)
         
-        if self.save_scores is True:
+        if self.save_scores is True and tmp_pop is not None:
             self._save_meta_objectives(tmp_pop, current_index, type_run)
 
 

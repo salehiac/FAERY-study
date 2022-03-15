@@ -144,16 +144,17 @@ class MetaWorldMT1(Problem):
             # will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
             # So ml1.train_classes is going to be of lenght 1
 
-            list_sample_task = self.ml1.train_classes if self.mode == "train" else self.ml1.test_classes
-
+            list_sample_class = self.ml1.train_classes if self.mode == "train" else self.ml1.test_classes
+            list_sample_task = self.ml1.train_tasks if self.mode == "train" else self.ml1.test_tasks
+            
             if nb_tasks == 1:           
-                self.env = list_sample_task[self.ML_env_name]()
+                self.env = list_sample_class[self.ML_env_name]()
                 self.task_id = np.random.randint(len(
-                    list_sample_task)) if task_id == -1 else task_id
+                    list_sample_class)) if task_id == -1 else task_id
                 self.task = list_sample_task[self.task_id]  # changes goal
                 self.env.set_task(self.task)  # Set task
             else:
-                self.env = MultiTaskEnv(list_sample_task, nb_tasks)
+                self.env = MultiTaskEnv(list_sample_class, nb_tasks)
 
         else:
             self.ml10 = ML10_obj

@@ -184,6 +184,15 @@ class ForSparseRewards(ABC):
                     for i in range(nb_samples)
                 ]))  # G_inner
 
+        # metadata = ns_instance(
+        #     sampler,  # sampler
+        #     [x for x in pop],  # population
+        #     self.mutator,  # mutator
+        #     self.inner_selector,  # inner_selector
+        #     self.agent_factory,  # make_ag
+        #     self.G_inner    # G_inner
+        # )
+        
         return metadata
     
     @abstractmethod

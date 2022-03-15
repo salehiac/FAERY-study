@@ -123,25 +123,25 @@ class NoveltySearch:
             initial_pop), "n_offspring should be larger or equal to n_pop"
 
         self.visualise_bds_flag = visualise_bds_flag
-
-        if os.path.isdir(logs_root):
-            self.logs_root = logs_root
-            self.log_dir_path = utils_misc.create_directory_with_pid(
-                dir_basename=logs_root + "/NS_log_" + utils_misc.rand_string() +
-                "_",
-                remove_if_exists=True,
-                no_pid=False)
-        else:
-            raise Exception(
-                "Root dir for logs not found. Please ensure that it exists before launching the script."
-            )
+        
+        # if os.path.isdir(logs_root):
+        #     self.logs_root = logs_root
+        #     self.log_dir_path = utils_misc.create_directory_with_pid(
+        #         dir_basename=logs_root + "/NS_log_" + utils_misc.rand_string() +
+        #         "_",
+        #         remove_if_exists=True,
+        #         no_pid=False)
+        # else:
+        #     raise Exception(
+        #         "Root dir for logs not found. Please ensure that it exists before launching the script."
+        #     )
 
         # for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
         self.task_solvers = {}  # key,value=generation, list(agents)
 
         self.compute_parent_child_stats = compute_parent_child_stats
 
-        self.save_archive_to_file = True
+        self.save_archive_to_file = False
         self.disable_tqdm = False
 
     def eval_agents(self, agents):
