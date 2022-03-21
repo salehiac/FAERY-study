@@ -293,10 +293,11 @@ class ForSparseRewards(ABC):
                 # [roots, depths, populations]
                 metadata = self._get_metadata(tmp_pop, "train")
 
+                # Updating the evolution table and the individuals
+                self._make_evolution_table(metadata, tmp_pop, outer_g, 'train', save)
+
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
-
-                self._make_evolution_table(metadata, tmp_pop, outer_g, 'train', save)
 
                 # if save is True:
                 #     with open(

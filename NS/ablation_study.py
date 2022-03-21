@@ -11,7 +11,7 @@ class FAERYQD_Ablation(FAERYQD):
     """
 
     def __init__(self, *args, objective_to_ignore=0, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, name_prefix="FAERY_QD_{}".format(objective_to_ignore), **kwargs)
     
         self.objective_to_ignore = objective_to_ignore
 

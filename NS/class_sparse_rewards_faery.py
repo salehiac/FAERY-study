@@ -97,7 +97,11 @@ class FAERYQD(FAERY):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, name_prefix="FAERY_QD", **kwargs)
+
+        if "name_prefix" not in kwargs.keys():
+            kwargs["name_prefix"] = "FAERY_QD"
+
+        super().__init__(*args, **kwargs)
 
         self.NSGA2 = utils_misc.NSGA2(k=15)
         self.inner_selector = self.NSGA2
