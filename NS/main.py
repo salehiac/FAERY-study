@@ -18,7 +18,7 @@
 import json
 
 from utils_main import init_main, get_parser
-from class_sparse_rewards_faery import FAERYNS, FAERYQD, FAERYRANDOM
+from class_sparse_rewards_faery import FAERYNS, FAERYQD, FAERYRANDOM, FAERYRANDOM_COMPLETE
 
 
 if __name__ == "__main__":
@@ -31,8 +31,10 @@ if __name__ == "__main__":
         algo_obj = FAERYQD
     elif args_obj.inner_algorithm.lower() == "ns":
         algo_obj = FAERYNS
-    else:
+    elif args_obj.inner_algorithm.lower() == "random":
         algo_obj = FAERYRANDOM
+    else:
+        algo_obj = FAERYRANDOM_COMPLETE
 
     algo = algo_obj(pop_sz=args_obj.pop_size,
                     off_sz=args_obj.off_size,

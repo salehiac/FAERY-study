@@ -117,7 +117,7 @@ class FAERYNS(FAERY):
 
 class FAERYRANDOM(FAERY):
     """
-    FAERY applied on RANDOM algorithms
+    FAERY applied on a RANDOM algorithm that randomly selects the descendants among the parent population
     """
 
     def __init__(self, *args, **kwargs):
@@ -125,3 +125,17 @@ class FAERYRANDOM(FAERY):
 
         self.inner_selector = functools.partial(deap_tools.selRandom,
                                                 k = 2 * self.pop_sz)
+                                        
+
+class FAERYRANDOM_COMPLETE(FAERY):
+    """
+    FAERY applied on a RANDOM algorithm that randomly generates a new population at each step
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, name_prefix="FAERY_NS", **kwargs)
+        
+        self.inner_selector = functools.partial(self.agent_factory)
+    
+    def _random_pop(self, pop=None):
+        return [self.agent_factory(i) for i in range(2 * self.pop_sz)]
