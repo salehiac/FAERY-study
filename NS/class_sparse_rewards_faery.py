@@ -113,7 +113,11 @@ class FAERYNS(FAERY):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, name_prefix="FAERY_NS", **kwargs)
+
+        if "name_prefix" not in kwargs.keys():
+            kwargs["name_prefix"] = "FAERY_NS"
+
+        super().__init__(*args, **kwargs)
 
         self.inner_selector = functools.partial(utils_misc.selBest,
                                                 k=2 * self.pop_sz)
@@ -125,7 +129,11 @@ class FAERYRANDOM(FAERY):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, name_prefix="FAERY_NS", **kwargs)
+
+        if "name_prefix" not in kwargs.keys():
+            kwargs["name_prefix"] = "FAERY_RAND"
+
+        super().__init__(*args, **kwargs)
 
         self.inner_selector = functools.partial(deap_tools.selRandom,
                                                 k = 2 * self.pop_sz)
