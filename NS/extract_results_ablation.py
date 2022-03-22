@@ -1,102 +1,111 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-filerange = [-1, 0, 1]
-start, end = 0, 44
-path, basename = "../data backup/FAERY/", "FAERY_QD_{}"
-title = ""
-colors = ("dodgerblue", "lightblue")
-colors_scores = {1:("chartreuse","yellowgreen"), 2:("indianred","darksalmon")}
+from utils_extract import *
 
-save_basename = "Results_{}"
 
-for k_fig in filerange:
-    
-    name = basename.format(k_fig)
+algo_types = ["NS"]
+removed_obj = [-1,0,1]
 
-    fig, axs = plt.subplots(figsize=(16,18), nrows=3)
+start, end = 0, 99
+path, basename = "../data backup/FAERY/", "FAERY_{}"
 
-    
-    list_prop_solved, list_avg_adapt, list_std_adapt = [], [], []
-    for filename in [path+name+"/evolution_table_train_{}.npz".format(i) for i in range(start, end+1)]:
+colors_adapt = ("dodgerblue", "lightblue")
+colors_scores = [("green","yellowgreen"), ("red","darksalmon")]
+colors_solved = ("gray", "dodgerblue")
+colors_new_score = ("dodgerblue", "lightblue")
 
-        try:
-            with np.load(filename, 'rb') as data:
-                arr = np.array(list(data.values())[0])
-        except FileNotFoundError:
-            raise FileNotFoundError("Cannot find the file:", filename)
+colors_compare = [("dodgerblue", "lightblue"), ("red","darksalmon"), ("green", "yellowgreen")]
 
-        solved, list_min = 0, []
-        for line in arr.T:
-            strip_line = line[np.where(line >= 0)]
+title_solo = "Performances de FAERY appliqué à {} sur 100x200 steps\nmoyenne sur 25 tâches"
+title_compare = "Comparison {}"
 
-            is_solved = len(strip_line) > 0
-            solved += int(is_solved)
-            if is_solved is True:
-                list_min.append(np.min(strip_line))
+save_basename_solo = "Results_{}"
+save_basename_compare = "Results_compare_{}"
 
-        list_prop_solved.append(solved / np.shape(arr)[1])
-        list_avg_adapt.append(np.mean(list_min))
-        list_std_adapt.append(np.std(list_min))
 
-    list_avg_adapt = np.array(list_avg_adapt)
-    list_std_adapt = np.array(list_std_adapt)
+for inner_algo in algo_types:
 
-    list_mean_std_1 = [[],[]]
-    list_mean_std_2 = [[],[]]
-    for filename in [path+name+"/meta-scores_train_{}.npz".format(i) for i in range(start, end+1)]:
+    results_obj = save_lone_graph(
+        path=path,
+        basename=basename,
+        start=start, end=end,
+        inner_algo=inner_algo,
+        removed_obj=removed_obj,
+        colors_adapt=colors_adapt,
+        colors_scores=colors_scores,
+        colors_solved=colors_solved,
+        save_basename=save_basename_solo,
+        title=title_solo
+    )
 
-        try:
-            with np.load(filename, 'rb') as data:
-                arr = np.array(list(data.values())[0])
-        except FileNotFoundError:
-            raise FileNotFoundError("Cannot find the file:", filename)
+    fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
+    x_values = range(start, end+1)
 
-        mean_scores = np.mean(arr, axis=0)
-        std_scores = np.std(arr, axis=0)
+    graph_filled(
+        ax=axs[0][0],
 
-        list_mean_std_1[0].append(mean_scores[0])
-        list_mean_std_2[0].append(mean_scores[1])
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(0, float('inf')),
+        area_alpha=.5,
 
-        list_mean_std_1[1].append(std_scores[0])
-        list_mean_std_2[1].append(std_scores[1])
-    
-    list_mean_std_1 = np.array(list_mean_std_1)
-    list_mean_std_2 = np.array(list_mean_std_2)
-    print(list_mean_std_2)
-    x_prop = range(len(list_prop_solved))
-    axs[0].plot(x_prop, list_prop_solved,
-                color=colors[0])
-    axs[1].plot(x_prop, list_avg_adapt, color=colors[0])
-    axs[1].fill_between(x_prop, list_avg_adapt + list_std_adapt,
-                        [max(val, 0) for val in list_avg_adapt - list_std_adapt], color=colors[1])
-    
-    axs2_2 = axs[2].twinx()
-    axs[2].plot(x_prop, list_mean_std_1[0], color=colors_scores[1][0])
-    axs[2].fill_between(x_prop, list_mean_std_1[0] + list_mean_std_1[1],
-                        [max(val, 0) for val in list_mean_std_1[0] - list_mean_std_1[1]], color=colors_scores[1][1])
-    
-    axs2_2.plot(x_prop, list_mean_std_2[0], color=colors_scores[2][0])
-    axs2_2.fill_between(x_prop, list_mean_std_2[0] + list_mean_std_2[1],
-                        [max(val, 0) for val in list_mean_std_2[0] - list_mean_std_2[1]], color=colors_scores[2][1])
+        xlabel="Generation",
+        ylabel="Necessary adaptations\n(meand and std)",
 
-    axs[0].set_xlabel("Generation")
-    axs[0].set_ylabel("% of solved environments")
-    axs[0].set_ylim(0, 1.2)
-    axs[0].grid(True)
-    axs[0].legend()
+    )
 
-    axs[1].set_xlabel("Generation")
-    axs[1].set_ylabel("Necessary adaptations\n(mean and std)")
-    axs[1].grid(True)
-    axs[1].legend()
+    for k in range(len(removed_obj)):
+        raw_scores = results_obj[k]["new score (raw, mean_std)"][0]
 
-    axs[2].set_xlabel("Generation")
-    axs[2].set_ylabel("F0")
-    axs2_2.set_ylabel("F1")
-    axs[2].grid(True)
-    axs[2].legend()
+        for i, x in enumerate(x_values):
+            axs[0][1].scatter([x for _ in range(len(raw_scores[i]))], raw_scores[i],
+            color=colors_compare[k][0], alpha=.5)
 
-    plt.suptitle(title.format(k_fig))
+        axs[0][1].plot([], color=colors_compare[k][0], label=str(removed_obj[k]))
 
-    plt.savefig("../data backup/Images/{}.png".format(save_basename.format(k_fig)))
+    axs[0][1].set_xlabel("Generation")
+    axs[0][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
+    axs[0][1].grid(True)
+    axs[0][1].legend()
+
+    graph_filled(
+        ax=axs[1][0],
+
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(0, float('inf')),
+        area_alpha=.5,
+
+        xlabel="Generation",
+        ylabel="F0",
+
+    )
+
+    graph_filled(
+        ax=axs[1][1],
+
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(float('-inf'), 0),
+        area_alpha=.5,
+
+        xlabel="Generation",
+        ylabel="F1",
+
+    )
+
+    plt.suptitle(title_compare.format(inner_algo))
+    plt.savefig("../data backup/Images/{}.png".format(save_basename_compare.format(inner_algo)))

@@ -8,7 +8,7 @@ from class_sparse_rewards_faery import FAERY, FAERYQD, FAERYNS, FAERYRANDOM
 
 class FAERY_Ablation(FAERY):
     """
-    FAERY applied on QD, ablation study object
+    FAERY, ablation study object
     """
 
     def __init__(self, *args, objective_to_ignore=0, **kwargs):
