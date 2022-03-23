@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+from scipy.spatial import ConvexHull
 
 
 def read_file(filename, prefix=None):
@@ -246,6 +249,135 @@ def save_lone_graph(path, basename, start, end,
         results_obj[-1]["new score (raw, mean_std)"] = [solution_per_task, solution_per_task_mean_std]
 
     return results_obj
+
+
+def save_compare_graph(start, end,
+                       inner_algo, removed_obj,
+                       colors_compare,
+                       save_basename_compare, title_compare,
+                       results_obj,
+                       ):
+    """
+    Saves the comparison graph for the ablation
+    Returns the computed data
+    """
+
+    fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
+    x_values = range(start, end+1)
+
+    graph_filled(
+        ax=axs[0][0],
+
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(0, float('inf')),
+        area_alpha=.5,
+
+        xlabel="Generation",
+        ylabel="Necessary adaptations\n(meand and std)",
+
+    )
+
+    for k in range(len(removed_obj)):
+        raw_scores = results_obj[k]["new score (raw, mean_std)"][0]
+
+        for i, x in enumerate(x_values):
+            axs[0][1].scatter([x for _ in range(len(raw_scores[i]))], raw_scores[i],
+            color=colors_compare[k][0], alpha=.5)
+
+        axs[0][1].plot([], color=colors_compare[k][0], label=str(removed_obj[k]))
+
+    axs[0][1].set_xlabel("Generation")
+    axs[0][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
+    axs[0][1].grid(True)
+    axs[0][1].legend()
+
+    graph_filled(
+        ax=axs[1][0],
+
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(0, float('inf')),
+        area_alpha=.5,
+
+        xlabel="Generation",
+        ylabel="F0",
+
+    )
+
+    graph_filled(
+        ax=axs[1][1],
+
+        toplot_x=x_values,
+        list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(removed_obj))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(removed_obj))],
+        list_colors_couple=[*colors_compare],
+        list_labels=removed_obj,
+        
+        extr_y=(float('-inf'), 0),
+        area_alpha=.5,
+
+        xlabel="Generation",
+        ylabel="F1",
+
+    )
+
+    plt.suptitle(title_compare.format(inner_algo))
+    plt.savefig("../data backup/Images/{}.png".format(save_basename_compare.format(inner_algo)))
+
+    return {}
+
+
+def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval):
+    """
+    Saves an animation of the individual's scores
+    """
+    results_obj = results_obj
+    removed_obj = removed_obj
+
+    fig = plt.figure()
+
+    def animate(i):
+        plt.clf()
+
+        RB = [plt.plot([], [], '+')[0] for obj in removed_obj]
+        for k, obj in enumerate(removed_obj):
+            data_score = results_obj[obj]["data score"]["raw scores"]
+            scores = np.array([val for val in data_score[i] if val[-1] > float('-inf')])
+
+            hull = ConvexHull(scores)
+            for simplex in hull.simplices:
+                plt.plot(scores[simplex, 0], scores[simplex, 1], color=colors_compare[k][0])
+                
+            #plt.fill_between(scores[hull.vertices, 0], scores[hull.vertices, 1], color=colors_compare[k][1], alpha=.5)
+
+            x = [val[0] for val in scores]
+            y = [val[1] for val in scores]
+            
+            RB[k].set_data(x, y)
+            RB[k].set_label(str(obj))
+            RB[k].set_color(colors_compare[k][0])
+
+        plt.legend()
+        plt.axis([0,10,-80,1])
+        plt.grid(True)
+        plt.xlabel("F0")
+        plt.ylabel("F1")
+        plt.title("Animation of the individuals' scores\nStep {}/{}".format(i, len(data_score)))
+
+        return RB
+
+    my_anim = animation.FuncAnimation(fig, animate, frames=end, interval=interval)
+    
+    my_anim.save("{}/{}/animated_scores_{}.gif".format("../data backup/Images", inner_algo, inner_algo), writer="pillow")
 
 
 def graph_filled(ax,

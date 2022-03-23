@@ -1,13 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
 
 from utils_extract import *
 
 
-algo_types = ["NS"]
-removed_obj = [-1,0,1]
-
-start, end = 0, 99
+start_end = {
+    "QD":(0,80),
+    "NS":(0,60),
+    #"RANDOM":(0,99)
+    }
+removed_obj = [-1, 0, 1]
 path, basename = "../data backup/FAERY/", "FAERY_{}"
 
 colors_adapt = ("dodgerblue", "lightblue")
@@ -24,7 +24,11 @@ save_basename_solo = "Results_{}"
 save_basename_compare = "Results_compare_{}"
 
 
-for inner_algo in algo_types:
+for inner_algo in start_end.keys():
+
+    save_basepath = "{}/".format(inner_algo)
+    start, end = start_end[inner_algo]
+    
 
     results_obj = save_lone_graph(
         path=path,
@@ -35,77 +39,25 @@ for inner_algo in algo_types:
         colors_adapt=colors_adapt,
         colors_scores=colors_scores,
         colors_solved=colors_solved,
-        save_basename=save_basename_solo,
+        save_basename=save_basepath + save_basename_solo,
         title=title_solo
     )
 
-    fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
-    x_values = range(start, end+1)
-
-    graph_filled(
-        ax=axs[0][0],
-
-        toplot_x=x_values,
-        list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(0, float('inf')),
-        area_alpha=.5,
-
-        xlabel="Generation",
-        ylabel="Necessary adaptations\n(meand and std)",
-
+    _ = save_compare_graph(
+        start=start, end=end,
+        inner_algo=inner_algo,
+        removed_obj=removed_obj,
+        colors_compare=colors_compare,
+        save_basename_compare=save_basepath + save_basename_compare,
+        title_compare=title_compare,
+        results_obj=results_obj,
     )
 
-    for k in range(len(removed_obj)):
-        raw_scores = results_obj[k]["new score (raw, mean_std)"][0]
-
-        for i, x in enumerate(x_values):
-            axs[0][1].scatter([x for _ in range(len(raw_scores[i]))], raw_scores[i],
-            color=colors_compare[k][0], alpha=.5)
-
-        axs[0][1].plot([], color=colors_compare[k][0], label=str(removed_obj[k]))
-
-    axs[0][1].set_xlabel("Generation")
-    axs[0][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
-    axs[0][1].grid(True)
-    axs[0][1].legend()
-
-    graph_filled(
-        ax=axs[1][0],
-
-        toplot_x=x_values,
-        list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(0, float('inf')),
-        area_alpha=.5,
-
-        xlabel="Generation",
-        ylabel="F0",
-
+    save_animation(
+        inner_algo=inner_algo,
+        colors_compare=colors_compare,
+        end=end,
+        results_obj=results_obj,
+        removed_obj=removed_obj,
+        interval=500,
     )
-
-    graph_filled(
-        ax=axs[1][1],
-
-        toplot_x=x_values,
-        list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(float('-inf'), 0),
-        area_alpha=.5,
-
-        xlabel="Generation",
-        ylabel="F1",
-
-    )
-
-    plt.suptitle(title_compare.format(inner_algo))
-    plt.savefig("../data backup/Images/{}.png".format(save_basename_compare.format(inner_algo)))
