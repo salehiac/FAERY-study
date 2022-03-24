@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 from scipy.spatial import ConvexHull
+from scipy.spatial.qhull import QhullError
 
 
 def read_file(filename, prefix=None):
@@ -353,11 +354,15 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
             data_score = results_obj[obj]["data score"]["raw scores"]
             scores = np.array([val for val in data_score[i] if val[-1] > float('-inf')])
 
-            hull = ConvexHull(scores)
-            for simplex in hull.simplices:
-                plt.plot(scores[simplex, 0], scores[simplex, 1], color=colors_compare[k][0])
+            try:
+                hull = ConvexHull(scores)
+                for simplex in hull.simplices:
+                    plt.plot(scores[simplex, 0], scores[simplex, 1], color=colors_compare[k][0])
                 
-            #plt.fill_between(scores[hull.vertices, 0], scores[hull.vertices, 1], color=colors_compare[k][1], alpha=.5)
+                #plt.fill_between(scores[hull.vertices, 0], scores[hull.vertices, 1], color=colors_compare[k][1], alpha=.5)
+            except QhullError:
+                print("Points share same coordinates")
+                pass
 
             x = [val[0] for val in scores]
             y = [val[1] for val in scores]
