@@ -5,10 +5,8 @@ matplotlib==2.1.1
 metaworld==0.0.0
 numpy==1.13.3
 opencv_python==4.5.5.62
-PyYAML==6.0
 scikit_learn==1.0.2
 scipy==0.19.1
 scoop==0.7.1.1
 termcolor==1.1.0
 torch==1.10.2
-tqdm==4.63.0
