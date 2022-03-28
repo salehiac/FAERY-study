@@ -61,13 +61,14 @@ def bash_command(cmd: list):
     return out, err, ret_code
 
 
-def create_directory_with_pid(dir_basename,
-                              remove_if_exists=True,
-                              no_pid=False):
+def create_directory(dir_basename,
+                     remove_if_exists=True,
+                     pid=True):
+
     while dir_basename[-1] == "/":
         dir_basename = dir_basename[:-1]
 
-    dir_path = dir_basename + str(os.getpid()) if not no_pid else dir_basename
+    dir_path = dir_basename + str(os.getpid()) if pid is True else dir_basename
     if os.path.exists(dir_path):
         if remove_if_exists:
             bash_command(["rm", dir_path, "-rf"])
@@ -82,6 +83,7 @@ def create_directory_with_pid(dir_basename,
 
 
 def dump_pickle(fn, obj):
+    if fn[-4:] != ".pkl":   fn += ".pkl"
     with open(fn, "wb") as fl:
         pickle.dump(obj, fl)
 

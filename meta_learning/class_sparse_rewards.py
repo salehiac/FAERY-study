@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
+import pickle
 import metaworld
 import numpy as np
 
@@ -47,7 +48,7 @@ class ForSparseRewards(ABC):
                  num_train_samples,
                  num_test_samples,
                  agent_factory,
-                 top_level_log_root="tmp/mqd_tmp/",
+                 top_level_log_root="tmp/",
                  name_prefix="meta-learning",
                  resume_from_gen={}):
         """
@@ -77,19 +78,26 @@ class ForSparseRewards(ABC):
         self.agent_factory = agent_factory
         self.resume_from_gen = resume_from_gen
         self.name_prefix = name_prefix
+        self.folder_name = name_prefix + '_' + utils_misc.rand_string()
 
         if os.path.isdir(top_level_log_root):
-            self.top_level_log = utils_misc.create_directory_with_pid(
-                dir_basename=top_level_log_root + "/{}_".format(name_prefix) +
-                utils_misc.rand_string() + "_",
+            self.top_level_log = utils_misc.create_directory(
+                dir_basename=top_level_log_root + "/{}_".format(self.folder_name),
                 remove_if_exists=True,
-                no_pid=False)
+                pid=True)
+            
+            utils_misc.create_directory(
+                dir_basename=self.top_level_log + "/NS_LOGS" ,
+                remove_if_exists=True,
+                pid=False)
+
             print(
                 colored(
                     "[NS info] temporary dir for {} was created: ".format(name_prefix) +
                     self.top_level_log,
                     "blue",
                     attrs=[]))
+
         else:
             raise Exception(f"tmp_dir ({top_level_log_root}) doesn't exist")
 
@@ -141,7 +149,7 @@ class ForSparseRewards(ABC):
 
         return tmp_pop
     
-    def _get_metadata(self, pop, type_run):
+    def _get_metadata(self, pop, type_run, outer_g):
         """
         Returns the metadata from the tasks : [roots, depths, populations]
         type_run : str "test" or "train"
@@ -179,6 +187,14 @@ class ForSparseRewards(ABC):
                 ],  # make_ag
                 [
                     self.G_inner
+                    for i in range(nb_samples)
+                ],
+                [
+                    self.top_level_log
+                    for i in range(nb_samples)
+                ],
+                [
+                    (type_run, outer_g)
                     for i in range(nb_samples)
                 ]))  # G_inner
 
@@ -289,7 +305,7 @@ class ForSparseRewards(ABC):
                     self.train_sampler.set_ml10obj(ml10obj)
 
                 # [roots, depths, populations]
-                metadata = self._get_metadata(tmp_pop, "train")
+                metadata = self._get_metadata(tmp_pop, "train", outer_g)
 
                 # Updating the evolution table and the individuals
                 self._make_evolution_table(metadata, tmp_pop, outer_g, 'train', save)
@@ -297,11 +313,11 @@ class ForSparseRewards(ABC):
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
 
-                # if save is True:
-                #     with open(
-                #             self.top_level_log + "/population_prior_" +
-                #             str(outer_g + self.starting_gen), "wb") as fl:
-                #         pickle.dump(self.pop, fl)
+                if save is True:
+                    with open(
+                            self.top_level_log + "/population_prior_" +
+                            str(outer_g + self.starting_gen), "wb") as fl:
+                        pickle.dump(self.pop, fl)
 
                 # reset evolvability and adaptation stats
                 for ind in self.pop:
@@ -317,56 +333,6 @@ class ForSparseRewards(ABC):
                               class_problem_metaworld.SampleSingleExampleFromML10):
                     self.test_sampler.set_ml10obj(ml10obj)
 
-                metadata = self._get_metadata(self.pop, "test")
+                metadata = self._get_metadata(self.pop, "test", outer_g)
                 
                 self._make_evolution_table(metadata, None, outer_g, "test", save)
-
-    def test_population(self, population, in_problem):
-        """
-        used for a posteriori testing after training is done
-
-        make sure in_problem is passed by reference
-        """
-
-        population_size = len(population)
-        offsprings_size = population_size
-
-        nov_estimator = class_novelty_estimators.ArchiveBasedNoveltyEstimator(k=15)
-        arch = class_archive.ListArchive(max_size=5000,
-                                    growth_rate=6,
-                                    growth_strategy="random",
-                                    removal_strategy="random")
-
-        ns = NoveltySearch(
-            archive=arch,
-            nov_estimator=nov_estimator,
-            mutator=self.mutator,
-            problem=in_problem,
-            selector=self.inner_selector,
-            n_pop=population_size,
-            n_offspring=offsprings_size,
-            agent_factory=self.agent_factory,
-            visualise_bds_flag=1,  # log to file
-            map_type="scoop",  # or "std"
-            logs_root="tmp/test_dir_tmp/",
-            compute_parent_child_stats=0,
-            initial_pop=[x for x in population])
-        # do NS
-        nov_estimator.log_dir = ns.log_dir_path
-        ns.disable_tqdm = True
-        ns.save_archive_to_file = False
-        _, solutions = ns(
-            iters=self.G_inner,
-            stop_on_reaching_task=True,  # do not set to False with current implem
-            save_checkpoints=0
-        )  # save_checkpoints is not implemented but other functions already do its job
-
-        assert len(
-            solutions.keys()
-        ) <= 1, "solutions should only contain solutions from a single generation"
-        if len(solutions.keys()):
-            depth = list(solutions.keys())[0]
-        else:
-            depth = 100000
-
-        return depth

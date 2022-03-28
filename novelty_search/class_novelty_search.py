@@ -44,9 +44,9 @@ class NoveltySearch:
             n_pop,
             n_offspring,
             agent_factory,
-            visualise_bds_flag,
+            top_level_log,
+            prefix_tuple,
             map_type="scoop",
-            logs_root="/tmp/ns_log/",
             compute_parent_child_stats=False,
             initial_pop=[],  # make sure they are passed by deepcopy
             problem_sampler=None):
@@ -124,14 +124,14 @@ class NoveltySearch:
 
         # self.visualise_bds_flag = visualise_bds_flag
         self.visualise_bds_flag = NoveltySearch.BD_VIS_DISABLE
-        
-        if os.path.isdir(logs_root):
-            self.logs_root = logs_root
-            self.log_dir_path = utils_misc.create_directory_with_pid(
-                dir_basename=logs_root + "/NS_log_" + utils_misc.rand_string() +
-                "_",
+
+        if os.path.isdir(top_level_log):
+            self.logs_root = top_level_log
+            self.log_dir_path = utils_misc.create_directory(
+                dir_basename=self.logs_root +
+                "/NS_LOGS/{}_{}".format(*prefix_tuple),
                 remove_if_exists=True,
-                no_pid=False)
+                pid=False)
         else:
             raise Exception(
                 "Root dir for logs not found. Please ensure that it exists before launching the script."
@@ -252,13 +252,19 @@ class NoveltySearch:
                         self.archive.dump(self.log_dir_path + f"/archive_{it}")
 
                 if len(task_solvers):
+
                     self.visualise_bds(
                         parents + [x for x in offsprings if x._solved_task],
                         generation_num=it)
+
                     utils_misc.dump_pickle(
                         self.log_dir_path + f"/population_gen_{it}", parents)
 
-                if len(task_solvers):
+                    utils_misc.dump_pickle(
+                        "{}/solvers_{}".format(self.log_dir_path, it),
+                        [ag for ag in task_solvers]
+                    )
+
                     print(colored("[NS info] found task solvers (generation " +
                                   str(it) + ")",
                                   "magenta",
@@ -267,6 +273,7 @@ class NoveltySearch:
                     self.task_solvers[it] = task_solvers
                     if stop_on_reaching_task:
                         break
+
                 gc.collect()
 
                 #tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")

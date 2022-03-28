@@ -50,11 +50,11 @@ def sample_mazes(G,
 
     if not from_dataset:
         if os.path.isdir(tmp_dir):
-            dir_path = utils_misc.create_directory_with_pid(
+            dir_path = utils_misc.create_directory(
                 dir_basename=tmp_dir + "/maze_generation_" +
                 utils_misc.rand_string() + "_",
                 remove_if_exists=True,
-                no_pid=False)
+                pid=True)
             print(
                 colored(
                     "[NS info] temporary dir for sample_mazes was created: " +

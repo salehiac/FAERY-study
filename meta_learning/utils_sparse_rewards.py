@@ -65,7 +65,7 @@ def _mutate_prior_pop(n_offspring, parents, mutator, agent_factory,
 
 
 def ns_instance(sampler, population, mutator, inner_selector, make_ag,
-                G_inner):
+                G_inner, top_level_log, prefix_tuple):
     """
     problems are now sampled in the NS constructor
     """
@@ -88,12 +88,12 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
         n_pop=population_size,
         n_offspring=offsprings_size,
         agent_factory=make_ag,
-        visualise_bds_flag=1,  # log to file
         map_type="scoop",  # or "std"
-        logs_root="tmp/NS_LOGS/",
         compute_parent_child_stats=0,
         initial_pop=[x for x in population],
-        problem_sampler=sampler)
+        problem_sampler=sampler,
+        top_level_log=top_level_log,
+        prefix_tuple=prefix_tuple)
 
     # do NS
     nov_estimator.log_dir = ns.log_dir_path

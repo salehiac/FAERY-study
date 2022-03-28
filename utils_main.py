@@ -187,7 +187,7 @@ def init_main(args_obj):
 
         behavior_descr_type = "type_3"
         agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/META_LOGS_ML1/"
+        top_level_log_root = "tmp/"
 
         train_sampler = class_problem_metaworld.SampleFromML1(
             bd_type=behavior_descr_type, mode="train", task_name=args_obj.task_name)
@@ -203,7 +203,7 @@ def init_main(args_obj):
 
         behavior_descr_type = "type_3"
         agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/META_LOGS_ML10/"
+        top_level_log_root = "tmp/"
 
         experiment_config["ML10 called every outer loop"] = 1
 
