@@ -1,5 +1,6 @@
 import argparse
 import random
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -11,6 +12,7 @@ from t_sne.utils_tsne import *
 # WILL DO TSNE ON THEM
 
 nb_samples = 5000
+perplexities = [25, 50, 75, 100]
 
 if __name__ == "__main__":
 
@@ -24,21 +26,39 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print("Retrieving files")
     solvers = get_solvers(args.meta_dir)
-    to_compute = random.sample(
+    nb_to_compute = min(nb_samples, len(solvers))
+
+    solvers_to_compute = random.sample(
         solvers,
-        min(nb_samples, len(solvers))
+        nb_to_compute
     )
+    
+    # params = get_parameters(args.meta_dir)
+    # params_to_compute = random.sample(
+    #     params,
+    #     min(nb_samples, len(params))
+    # )
 
-    solvers_bds = [ag._behavior_descr[0] for ag in to_compute] 
-    embedding = TSNE(n_components=2).fit_transform(solvers_bds)
+    fig, axs = plt.subplots(ncols=len(perplexities))
+    print("Embedding {} solvers among {} retrieved".format(nb_to_compute, len(solvers)))
 
-    plt.plot(embedding[:, 0], embedding[:, 1], "bo", label="solvers")
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.xlabel("$e_1$",fontsize=14)
-    plt.ylabel("$e_2$",fontsize=14)
+    for i, perplexity in enumerate(perplexities):
+        solvers_bds = np.array([ag._behavior_descr[0] for ag in solvers_to_compute]).reshape(-1,1)
+        solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solvers_bds)
 
+        # print("Embedding parameters")
+        # params_arr = np.array([np.array(ag.get_flattened_weights()) for ag in params_to_compute]).reshape(-1,1)
+        # params_embedding = TSNE(n_components=2).fit_transform(params_arr)
+
+        print("Plotting")
+        
+        axs[i].scatter(solvers_embedding[:, 0], solvers_embedding[:, 1], label="solvers", color="blue")
+        # axs[1].plot(params_embedding[:, 0], params_embedding[:, 1], "bo", label="parameters")
+
+        axs[i].set_title("Perplexity: {}".format(perplexity))
+
+    plt.suptitle("TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(nb_to_compute))
     plt.show()
 

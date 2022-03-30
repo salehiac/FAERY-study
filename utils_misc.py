@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import shutil
 import subprocess
 import os
 import sys
@@ -33,9 +34,6 @@ import numpy as np
 
 from datetime import datetime
 from functools import reduce
-
-
-sys.path.append("../")
 
 
 def get_current_time_date():
@@ -67,23 +65,28 @@ def create_directory(dir_basename,
 
     while dir_basename[-1] == "/":
         dir_basename = dir_basename[:-1]
+    while dir_basename[0] == "/":
+        dir_basename = dir_basename[1:]   
 
-    dir_path = dir_basename + str(os.getpid()) if pid is True else dir_basename
-    if os.path.exists(dir_path):
-        if remove_if_exists:
-            bash_command(["rm", dir_path, "-rf"])
-        else:
-            raise Exception("directory exists but remove_if_exists is False")
-    bash_command(["mkdir", dir_path])
-    notif_name = dir_path + "/creation_notification.txt"
-    bash_command(["touch", notif_name])
-    with open(notif_name, "w") as fl:
+    dir_path = dir_basename + "_" + str(os.getpid()) if pid is True else dir_basename
+
+    # if os.path.exists(dir_path):
+    #     if remove_if_exists:
+    #         shutil.rmtree(dir_path)
+    #     else:
+    #         raise Exception("directory exists but remove_if_exists is False")
+
+    os.makedirs(dir_path, exist_ok=True)
+    # MULTITHREAD???
+    with open(dir_path + "/creation_notification.txt", "w") as fl:
         fl.write("created on " + get_current_time_date() + "\n")
+
     return dir_path
 
 
 def dump_pickle(fn, obj):
-    if fn[-4:] != ".pkl":   fn += ".pkl"
+    if fn[-4:] != ".pkl":
+        fn += ".pkl"
     with open(fn, "wb") as fl:
         pickle.dump(obj, fl)
 
@@ -200,11 +203,12 @@ def selBest(individuals, k, automatic_threshold=True):
     return [individuals[i] for i in s_indx[:k]]
 
 
-### Deap sometimes creates problems with parallelism if those are not called in the global scope
+# Deap sometimes creates problems with parallelism if those are not called in the global scope
 deap.creator.create("Fitness2d", deap.base.Fitness,
-                            weights=(1.0, 1.0,))
+                    weights=(1.0, 1.0,))
 deap.creator.create("LightIndividuals", list,
-                            fitness=deap.creator.Fitness2d, ind_i=-1)
+                    fitness=deap.creator.Fitness2d, ind_i=-1)
+
 
 class NSGA2:
     """

@@ -82,12 +82,12 @@ class ForSparseRewards(ABC):
 
         if os.path.isdir(top_level_log_root):
             self.top_level_log = utils_misc.create_directory(
-                dir_basename=top_level_log_root + "/{}_".format(self.folder_name),
+                dir_basename= "{}/{}".format(top_level_log_root, self.folder_name),
                 remove_if_exists=True,
                 pid=True)
             
             utils_misc.create_directory(
-                dir_basename=self.top_level_log + "/NS_LOGS" ,
+                dir_basename= "{}/{}".format(self.top_level_log, "NS_LOGS") ,
                 remove_if_exists=True,
                 pid=False)
 
@@ -204,7 +204,9 @@ class ForSparseRewards(ABC):
         #     self.mutator,  # mutator
         #     self.inner_selector,  # inner_selector
         #     self.agent_factory,  # make_ag
-        #     self.G_inner    # G_inner
+        #     self.G_inner,    # G_inner
+        #     self.top_level_log,
+        #     (type_run, outer_g)
         # )
         
         return metadata

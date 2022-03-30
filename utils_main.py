@@ -92,6 +92,12 @@ def get_parser():
         help="the inner algorithm to use (QD, NS, RANDOM)",
         default="NS"
     )
+    parser.add_argument(
+        "--top_level_log",
+        type=str,
+        help="the directory where the logs will be stored",
+        default="tmp/"
+    )
 
     return parser
 
@@ -162,7 +168,6 @@ def init_main(args_obj):
     if args_obj.problem == "random_mazes":
 
         agent_factory = _make_2d_maze_ag
-        top_level_log_root = "tmp/NS_LOGS"
 
         train_sampler = functools.partial(
             class_problem_hard_maze.sample_mazes,
@@ -187,7 +192,6 @@ def init_main(args_obj):
 
         behavior_descr_type = "type_3"
         agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/"
 
         train_sampler = class_problem_metaworld.SampleFromML1(
             bd_type=behavior_descr_type, mode="train", task_name=args_obj.task_name)
@@ -203,7 +207,6 @@ def init_main(args_obj):
 
         behavior_descr_type = "type_3"
         agent_factory = _make_metaworld_ml1_ag
-        top_level_log_root = "tmp/"
 
         experiment_config["ML10 called every outer loop"] = 1
 
@@ -211,5 +214,5 @@ def init_main(args_obj):
             bd_type=behavior_descr_type, mode="train")
         test_sampler = class_problem_metaworld.SampleSingleExampleFromML10(
             bd_type=behavior_descr_type, mode="test")
-    
-    return train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config
+
+    return train_sampler, test_sampler, agent_factory, args_obj.top_level_log, resume_dict, experiment_config
