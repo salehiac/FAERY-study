@@ -1,18 +1,28 @@
 import argparse
-import random
-import numpy as np
 
 import matplotlib.pyplot as plt
 
-from sklearn.manifold import TSNE
-
 from t_sne.utils_tsne import *
+from t_sne.class_solver_extractor import SolverExtractor
 
-# WILL LOAD ALL THE BDS
-# WILL DO TSNE ON THEM
 
 nb_samples = 5000
 perplexities = [25, 50, 75, 100]
+
+to_highlight = {
+    "QD_-1":"teal",
+    "QD_0":"dodgerblue",
+    "QD_1":"skyblue",
+    "NS_-1":"firebrick",
+    "NS_0":"orangered",
+    "NS_1":"lightcoral",
+}
+
+save_path, save_basename = "data/Images/solvers", "TNSE_{}"
+
+title_bland = "TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(
+    nb_samples)
+title_highlight = title_bland
 
 if __name__ == "__main__":
 
@@ -21,44 +31,58 @@ if __name__ == "__main__":
     parser.add_argument(
         "--meta_dir",
         type=str,
-        help="path to meta-learning directory"
+        help="path to meta-learning directory",
+        default="./data/solvers"
     )
 
     args = parser.parse_args()
 
-    print("Retrieving files")
-    solvers = get_solvers(args.meta_dir)
-    nb_to_compute = min(nb_samples, len(solvers))
+    print("Retrieving files in {}".format(args.meta_dir))
+    extractor = SolverExtractor(load_path=args.meta_dir)
 
-    solvers_to_compute = random.sample(
-        solvers,
-        nb_to_compute
+    perplex_to_tsne = compute_tsne(
+        input_list=extractor.list,
+        perplexities=perplexities,
+        max_samples=nb_samples,
+        verbose=True
     )
-    
-    # params = get_parameters(args.meta_dir)
-    # params_to_compute = random.sample(
-    #     params,
-    #     min(nb_samples, len(params))
-    # )
 
-    fig, axs = plt.subplots(ncols=len(perplexities))
-    print("Embedding {} solvers among {} retrieved".format(nb_to_compute, len(solvers)))
+    print("Unpacking TSNEs")
+    perplex_to_extractor = [
+        extractor(solvers_dict = extractor.unpack(perplex_to_tsne[p]))
+        for p in perplex_to_tsne.keys()
+    ]
 
-    for i, perplexity in enumerate(perplexities):
-        solvers_bds = np.array([ag._behavior_descr[0] for ag in solvers_to_compute]).reshape(-1,1)
-        solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solvers_bds)
+    print("Plotting")
+    plot_highlight(
+        perplexities=perplexities,
+        perplex_to_extractor=perplex_to_extractor,
+        to_highlight={},
+        title=title_bland,
+        save_path=save_path,
+        save_name=save_basename.format("bland"),
+    )
 
-        # print("Embedding parameters")
-        # params_arr = np.array([np.array(ag.get_flattened_weights()) for ag in params_to_compute]).reshape(-1,1)
-        # params_embedding = TSNE(n_components=2).fit_transform(params_arr)
+    print("Plotting highlight")
+    plot_highlight(
+        perplexities=perplexities,
+        perplex_to_extractor=perplex_to_extractor,
+        to_highlight=to_highlight,
+        title=title_highlight,
+        save_path=save_path,
+        save_name=save_basename.format("highlighted"),
+    )
 
-        print("Plotting")
-        
-        axs[i].scatter(solvers_embedding[:, 0], solvers_embedding[:, 1], label="solvers", color="blue")
-        # axs[1].plot(params_embedding[:, 0], params_embedding[:, 1], "bo", label="parameters")
+    #NONE
+    #HIGHLIGHT
+    #FOLLOW META
+    #FOLLOW INNER
 
-        axs[i].set_title("Perplexity: {}".format(perplexity))
+    # fig, axs = plt.subplots(ncols=len(perplexities))
+    # for i, perplexity in enumerate(perplexities):
+    #     axs[i].scatter(solvers_embedding[:, 0], solvers_embedding[:, 1], label="solvers", color="blue")
+    #     axs[i].set_title("Perplexity: {}".format(perplexity))
 
-    plt.suptitle("TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(nb_to_compute))
-    plt.show()
+    # plt.suptitle("TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(nb_to_compute))
+    # plt.show()
 

@@ -2,12 +2,13 @@ from utils_extract import *
 
 
 start_end = {
-    "QD":(0,99),
-    "NS":(0,99),
-    "RANDOM":(0,99)
+    "QD":(0,59),
+    "NS":(0,59),
+    # "RANDOM":(0,59)
     }
 removed_obj = [-1, 0, 1]
-path, basename = "data/FAERY/", "FAERY_{}"
+path, basename = "data/solvers/", "FAERY_{}"
+save_path = "data/Images/solvers"
 
 solo = True
 compare = True
@@ -33,6 +34,7 @@ for inner_algo in start_end.keys():
     start, end = start_end[inner_algo]
     
     if solo is True:
+        print("Saving lone graph..", end='\r')
         results_obj = save_lone_graph(
             path=path,
             basename=basename,
@@ -43,10 +45,12 @@ for inner_algo in start_end.keys():
             colors_scores=colors_scores,
             colors_solved=colors_solved,
             save_basename=save_basepath + save_basename_solo,
-            title=title_solo
+            title=title_solo,
+            to_path=save_path,
         )
 
     if compare is True:
+        print("Saving compare graph..", end='\r')
         _ = save_compare_graph(
             start=start, end=end,
             inner_algo=inner_algo,
@@ -55,9 +59,11 @@ for inner_algo in start_end.keys():
             save_basename_compare=save_basepath + save_basename_compare,
             title_compare=title_compare,
             results_obj=results_obj,
+            to_path=save_path,
         )
 
     if animate is True:
+        print("Saving the scores' animation..", end='\r')
         save_animation(
             inner_algo=inner_algo,
             colors_compare=colors_compare,
@@ -65,4 +71,7 @@ for inner_algo in start_end.keys():
             results_obj=results_obj,
             removed_obj=removed_obj,
             interval=500,
+            to_path=save_path,
         )
+    print(40 * " ", end='\r')
+    print("Done")
