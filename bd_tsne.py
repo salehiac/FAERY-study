@@ -11,11 +11,11 @@ perplexities = [25, 50, 75, 100]
 
 to_highlight = {
     "QD_-1":"teal",
-    "QD_0":"dodgerblue",
-    "QD_1":"skyblue",
-    "NS_-1":"firebrick",
-    "NS_0":"orangered",
-    "NS_1":"lightcoral",
+    #"QD_0":"dodgerblue",
+    #"QD_1":"skyblue",
+    #"NS_-1":"firebrick",
+    #"NS_0":"orangered",
+    #"NS_1":"lightcoral",
 }
 
 save_path, save_basename = "data/Images/solvers", "TNSE_{}"
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     print("Retrieving files in {}".format(args.meta_dir))
     extractor = SolverExtractor(load_path=args.meta_dir)
 
+    print("Computing TSNEs")
     perplex_to_tsne = compute_tsne(
         input_list=extractor.list,
         perplexities=perplexities,
@@ -48,10 +49,10 @@ if __name__ == "__main__":
     )
 
     print("Unpacking TSNEs")
-    perplex_to_extractor = [
-        extractor(solvers_dict = extractor.unpack(perplex_to_tsne[p]))
+    perplex_to_extractor = {
+        p:SolverExtractor(solvers_dict = extractor.unpack(perplex_to_tsne[p]))
         for p in perplex_to_tsne.keys()
-    ]
+    }
 
     print("Plotting")
     plot_highlight(
@@ -73,16 +74,5 @@ if __name__ == "__main__":
         save_name=save_basename.format("highlighted"),
     )
 
-    #NONE
-    #HIGHLIGHT
     #FOLLOW META
     #FOLLOW INNER
-
-    # fig, axs = plt.subplots(ncols=len(perplexities))
-    # for i, perplexity in enumerate(perplexities):
-    #     axs[i].scatter(solvers_embedding[:, 0], solvers_embedding[:, 1], label="solvers", color="blue")
-    #     axs[i].set_title("Perplexity: {}".format(perplexity))
-
-    # plt.suptitle("TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(nb_to_compute))
-    # plt.show()
-

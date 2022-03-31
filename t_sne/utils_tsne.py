@@ -95,21 +95,29 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max
 def plot_highlight(
     perplexities,
     perplex_to_extractor,
-    to_highlight={}, base_color="blue",
+    to_highlight={}, base_color="blue", box_size=12, marker='o',
     title="", save_path=None, save_name=""):
     """
     Plots the TSNEs at different perplexities and highlights the given algorithms
     """
 
-    fig, axs = plt.subplots(ncols=len(perplexities))
+    fig, axs = plt.subplots(
+        figsize=(box_size * len(perplexities), box_size),
+        ncols=len(perplexities)
+    )
 
+    if len(perplexities) == 1:
+        axs = [axs]
+    
     for i, perplexity in enumerate(perplexities):
         extractor = perplex_to_extractor[perplexity]
-        axs[i].scatter(extractor.list[:, 0], extractor.list[:, 1], label="solvers", color=base_color)
+        axs[i].scatter(np.array(extractor.list)[:, 0], np.array(extractor.list)[:, 1],
+            label="solvers", color=base_color, marker=marker)
 
-        for algo, color in to_highlight:
+        for algo, color in to_highlight.items():
             points = extractor.get_algorithm(algo)
-            axs[i].scatter(points[:, 0], points[:, 1], label=algo, color=color)
+            axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
+                label=algo, color=color, marker=marker)
         
         axs[i].set_title("Perplexity: {}".format(perplexity))
     

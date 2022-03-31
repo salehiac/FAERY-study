@@ -1,4 +1,4 @@
-from utils_tsne import get_files, order_str_int
+from t_sne.utils_tsne import get_files, order_str_int
 
 
 class SolverExtractor:
@@ -55,7 +55,7 @@ class SolverExtractor:
                             len(solvers_list) + len(inter_dict[inner_step]) #end
                         )
 
-                        solvers_list += inter_dict[inner_step]
+                        solvers_list += list(inter_dict[inner_step])
         
         return solvers_list
 
@@ -89,7 +89,7 @@ class SolverExtractor:
 
         solvers_from_algo = []
         for (algorithm, type_run, meta_step, inner_step), (start, end) in self.position_in_list.items():
-            if algorithm == input_algorithm:
+            if input_algorithm in algorithm:
                 solvers_from_algo += self.list[start:end]
 
         return solvers_from_algo
