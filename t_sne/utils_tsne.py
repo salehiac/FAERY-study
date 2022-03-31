@@ -3,6 +3,7 @@ import pickle
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 from sklearn.manifold import TSNE
 
@@ -93,8 +94,7 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max
 
 
 def plot_highlight(
-    perplexities,
-    perplex_to_extractor,
+    perplexities, perplex_to_extractor,
     to_highlight={}, base_color="blue", box_size=12, marker='o',
     title="", save_path=None, save_name=""):
     """
@@ -115,7 +115,7 @@ def plot_highlight(
             label="solvers", color=base_color, marker=marker)
 
         for algo, color in to_highlight.items():
-            points = extractor.get_algorithm(algo)
+            points = extractor.get_params(algo)
             axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
                 label=algo, color=color, marker=marker)
         
@@ -128,3 +128,56 @@ def plot_highlight(
         plt.show()
     else:
         plt.savefig("{}/{}.png".format(save_path, save_name))
+
+
+def plot_follow(
+    perplexities, perplex_to_extractor,
+    to_highlight, types_run, meta_steps, inner_steps,
+    base_color="blue", box_size=12, marker='o',
+    base_title="{} {} {} {}", save_path=None, save_name="",
+    fps=15):
+    """
+    Animates the TSNE plots for given meta_steps and inner_steps
+    """
+
+    fig, axs = plt.subplots(
+        figsize=(box_size * len(perplexities), box_size),
+        ncols=len(perplexities)
+    )
+
+    if len(perplexities) == 1:
+        axs = [axs]
+
+    movie_writer = animation.PillowWriter(fps=fps)
+    movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name))
+
+    for algo, color in to_highlight.items():
+        for type_run in types_run:
+            for meta_step in meta_steps:
+                for inner_step in inner_steps:
+                    plt.clf()
+
+                    for k, perplexity in enumerate(perplexities):
+                        extractor = perplex_to_extractor[perplexity]
+
+                        axs[k].scatter(np.array(extractor.list)[:, 0], np.array(extractor.list)[:, 1],
+                            label="solvers", color=base_color, marker=marker)
+                        
+                        points = np.array(extractor.get_params(
+                            input_algorithm=algo,
+                            input_type=type_run,
+                            input_meta=meta_step,
+                            input_step=inner_step
+                        ))
+
+                        axs[k].scatter(points[:, 0], points[:, 1],
+                            label=algo, color=color, marker=marker)
+
+                        axs[k].set_title("Perplexity: {}".format(perplexity))
+
+                    fig.legend(*axs[0].get_legend_handles_labels())
+                    plt.suptitle(base_title.format(algo, type_run, meta_step, inner_step))
+
+                    movie_writer.grab_frame()
+
+    movie_writer.finish()

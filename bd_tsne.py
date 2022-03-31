@@ -1,7 +1,5 @@
 import argparse
 
-import matplotlib.pyplot as plt
-
 from t_sne.utils_tsne import *
 from t_sne.class_solver_extractor import SolverExtractor
 
@@ -23,6 +21,7 @@ save_path, save_basename = "data/Images/solvers", "TNSE_{}"
 title_bland = "TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(
     nb_samples)
 title_highlight = title_bland
+
 
 if __name__ == "__main__":
 

@@ -82,15 +82,26 @@ class SolverExtractor:
 
         return output_dict
 
-    def get_algorithm(self, input_algorithm):
+    def __check_valid(self, goal, current, contained=False):
         """
-        Returns all the solvers from the given algorithm
+        Checks if the goal corresponds to the current query
+        """
+
+        return (goal is None) or (goal in current if contained is True else goal == current)
+
+    def get_params(self, input_algorithm=None, input_type=None, input_meta=None, input_step=None):
+        """
+        Returns all the solvers from the given parameters
         """
 
         solvers_from_algo = []
         for (algorithm, type_run, meta_step, inner_step), (start, end) in self.position_in_list.items():
-            if input_algorithm in algorithm:
-                solvers_from_algo += self.list[start:end]
+            if all([
+                self.__check_valid(input_algorithm, algorithm, True),
+                self.__check_valid(input_type, type_run),
+                self.__check_valid(input_meta, meta_step),
+                self.__check_valid(input_step, inner_step)
+                ]) is True: solvers_from_algo += self.list[start:end]
 
         return solvers_from_algo
 
@@ -112,5 +123,5 @@ if __name__=="__main__":
 
                     assert so == uo, "Unpacking failed"
 
-    assert sum([len(s.get_algorithm(algo)) for algo in s.algorithms]) == len(s.list), \
+    assert sum([len(s.get_params(algo)) for algo in s.algorithms]) == len(s.list), \
         "Recovery of algorithms failed"
