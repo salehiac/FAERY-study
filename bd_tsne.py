@@ -1,77 +1,83 @@
-import argparse
+import json
 
+from utils_misc import get_path
 from t_sne.utils_tsne import *
 from t_sne.class_solver_extractor import SolverExtractor
 
 
-nb_samples = 5000
-perplexities = [25, 50, 75, 100]
+with open(get_path(default="tsne.json"), 'r') as f:
+    params = json.load(f)
 
-to_highlight = {
-    "QD_-1":"teal",
-    #"QD_0":"dodgerblue",
-    #"QD_1":"skyblue",
-    #"NS_-1":"firebrick",
-    #"NS_0":"orangered",
-    #"NS_1":"lightcoral",
-}
 
-save_path, save_basename = "data/Images/solvers", "TNSE_{}"
-
-title_bland = "TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2".format(
-    nb_samples)
+title_bland = "TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2"\
+    .format(params["nb_samples"])
 title_highlight = title_bland
+title_animation = "{} ({}), meta-step={}, inner_step={}"
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='TSNE visualization')
-
-    parser.add_argument(
-        "--meta_dir",
-        type=str,
-        help="path to meta-learning directory",
-        default="./data/solvers"
-    )
-
-    args = parser.parse_args()
-
-    print("Retrieving files in {}".format(args.meta_dir))
-    extractor = SolverExtractor(load_path=args.meta_dir)
+    print("Retrieving files in {}".format(params["load_directory"]))
+    extractor = SolverExtractor(load_path=params["load_directory"])
 
     print("Computing TSNEs")
     perplex_to_tsne = compute_tsne(
         input_list=extractor.list,
-        perplexities=perplexities,
-        max_samples=nb_samples,
+        perplexities=params["perplexities"],
+        max_samples=params["nb_samples"],
         verbose=True
     )
 
     print("Unpacking TSNEs")
     perplex_to_extractor = {
-        p:SolverExtractor(solvers_dict = extractor.unpack(perplex_to_tsne[p]))
+        p: SolverExtractor(solvers_dict=extractor.unpack(perplex_to_tsne[p]))
         for p in perplex_to_tsne.keys()
+    }
+
+    params_data = {
+        "perplexities": params["perplexities"],
+        "perplex_to_extractor": perplex_to_extractor,
     }
 
     print("Plotting")
     plot_highlight(
-        perplexities=perplexities,
-        perplex_to_extractor=perplex_to_extractor,
         to_highlight={},
+
         title=title_bland,
-        save_path=save_path,
-        save_name=save_basename.format("bland"),
+        save_path=params["save_path"],
+        save_name=params["save_basename"].format('bland'),
+
+        **params_data,
+        **params["params_plot"],
     )
 
     print("Plotting highlight")
     plot_highlight(
-        perplexities=perplexities,
-        perplex_to_extractor=perplex_to_extractor,
-        to_highlight=to_highlight,
+
+        to_highlight=params["to_highlight"],
+
         title=title_highlight,
-        save_path=save_path,
-        save_name=save_basename.format("highlighted"),
+        save_path=params["save_path"],
+        save_name=params["save_basename"].format("highlighted"),
+
+        **params_data,
+        **params["params_plot"],
     )
 
-    #FOLLOW META
-    #FOLLOW INNER
+    print("Computing animation")
+    for algo, color in params["to_follow"].items():
+        temp_to_follow = {algo:color}
+
+        plot_follow(
+
+            to_highlight=temp_to_follow,
+            meta_steps={"train": extractor.meta_steps["train"]},
+
+            base_title=title_animation,
+            save_path=params["save_path"],
+            save_name=params["save_basename"].format("{}_animated".format(algo)),
+
+            **params_data,
+            **params["params_plot"],
+            **params["params_anim"],
+        )

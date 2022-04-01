@@ -1,0 +1,31 @@
+{
+    "nb_samples": 5000,
+    "perplexities": [75],
+
+    "load_directory": "./data/solvers/assembly-v2",
+    "save_path": "data/Images/solvers/assembly-v2", 
+    "save_basename":"TNSE_{}",
+
+    "to_highlight": {
+        "QD_-1":"teal"
+    },
+
+    "to_follow": {
+        "NS_-1": "red"
+    },
+
+    "params_plot": {
+        "box_size": 8,
+        "marker": "o",
+        "base_color": "lightblue"
+    },
+
+    "params_anim": {
+        "background_alpha":1,
+        "inner_alpha":0.25,
+        "types_run": ["train"],
+        "animate_inner": true,
+        "fps": 4,
+        "dpi": 100
+    }
+}

@@ -1,41 +1,38 @@
-import numpy as np
+import json
 import matplotlib.pyplot as plt
 
+from utils_misc import get_path
 from utils_extract import *
 
 
-filerange = ["QD"]
-start, end = 0, 61
-path, basename = "data/FAERY/", "FAERY_{}_-1"
-title = "Performances de FAERY appliqué à {} sur 75x200 steps\nmoyenne sur 25 tâches"
-colors = {"train": ("dodgerblue", "lightblue"), "test": ("indianred", "pink")}
+with open(get_path(default="results.json"), 'r') as f:
+    params = json.load(f)
 
-save_basename = "Results_{}"
 
-for k_fig in filerange:
+for k_fig in params["filerange"]:
     
-    name = basename.format(k_fig)
+    name = params["basename"].format(k_fig)
 
     fig, axs = plt.subplots(figsize=(16,12), nrows=2)
     
     for prefix in ("test", "train"):
 
-        data = get_evolution(path=path,
+        data = get_evolution(path=params["path"],
                              name=name,
-                             start=start,
-                             end=end,
+                             start=params["start"],
+                             end=params["end"],
                              prefix=prefix)
         
-        x_prop = range(start, end+1) if prefix == "train" else range(start, end+1, 10)
+        x_prop = range(params["start"], params["end"]+1) if prefix == "train" else range(params["start"], params["end"]+1, 10)
 
         axs[0].plot(x_prop, data["proportion solved"],
-                    color=colors[prefix][0], label=prefix)
+                    color=params["colors"][prefix][0], label=prefix)
         
         graph_filled(ax=axs[1],
                      toplot_x=x_prop,
                      list_toplot_y_main=[data["necessary adaptations (mean/std)"][0]],
                      list_toplot_y_area=[data["necessary adaptations (mean/std)"][1]],
-                     list_colors_couple=[colors[prefix]],
+                     colors_couple=[params["colors"][prefix]],
                      list_labels=[prefix],
                      xlabel="Generation",
                      ylabel="Necessary adaptations\n(mean and std)",
@@ -45,9 +42,9 @@ for k_fig in filerange:
         axs[0].set_ylabel("% of solved environments")
         axs[0].set_ylim(0, 1.2)
         axs[0].grid(True)
-        axs[0].legend()
+        axs[0].legparams["end"]()
 
 
-    plt.suptitle(title.format(k_fig))
+    plt.supparams["title"](params["title"].format(k_fig))
 
-    plt.savefig("../data backup/Images/{}.png".format(save_basename.format(k_fig)))
+    plt.savefig("../data backup/Images/{}.png".format(params["save_basename"].format(k_fig)))

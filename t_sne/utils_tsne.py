@@ -106,6 +106,8 @@ def plot_highlight(
         ncols=len(perplexities)
     )
 
+    fig.tight_layout(rect=[0, 0, 1, .90])
+
     if len(perplexities) == 1:
         axs = [axs]
     
@@ -132,10 +134,11 @@ def plot_highlight(
 
 def plot_follow(
     perplexities, perplex_to_extractor,
-    to_highlight, types_run, meta_steps, inner_steps,
+    to_highlight, types_run, meta_steps, animate_inner=True,
+    background_alpha=.25, inner_alpha=.5,
     base_color="blue", box_size=12, marker='o',
     base_title="{} {} {} {}", save_path=None, save_name="",
-    fps=15):
+    fps=15, dpi=100):
     """
     Animates the TSNE plots for given meta_steps and inner_steps
     """
@@ -145,39 +148,88 @@ def plot_follow(
         ncols=len(perplexities)
     )
 
+    fig.tight_layout(rect=[0, 0, 1, .95])
+    
     if len(perplexities) == 1:
         axs = [axs]
 
-    movie_writer = animation.PillowWriter(fps=fps)
-    movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name))
+    movie_writer = animation.ImageMagickFileWriter(fps=fps)
+    movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
 
-    for algo, color in to_highlight.items():
-        for type_run in types_run:
-            for meta_step in meta_steps:
-                for inner_step in inner_steps:
-                    plt.clf()
+    # Plotting the background solvers
+    for k, perplexity in enumerate(perplexities):
+        points = np.array(perplex_to_extractor[perplexity].list)
+        axs[k].scatter(points[:, 0], points[:, 1],
+            label="solvers", color=base_color, marker=marker, alpha=background_alpha)
+        axs[k].set_title("Perplexity: {}".format(perplexity))
 
-                    for k, perplexity in enumerate(perplexities):
-                        extractor = perplex_to_extractor[perplexity]
+    # Extractors all have the same structure, just not the same values
+    basic_extractor = list(perplex_to_extractor.values())[0]
+    
+    # Animation
+    for i1, (algo, color) in enumerate(to_highlight.items()):
 
-                        axs[k].scatter(np.array(extractor.list)[:, 0], np.array(extractor.list)[:, 1],
-                            label="solvers", color=base_color, marker=marker)
-                        
-                        points = np.array(extractor.get_params(
+        objects = [
+            (
+                axs[k].plot([], [], label=algo, color=color, marker=marker, alpha=1, linestyle='None')[0],
+                axs[k].plot([], [], label=algo, color=color, marker=marker, alpha=inner_alpha, linestyle='None')[0],
+            )
+            for k in range(len(perplexities))
+        ]
+
+        algorithm = basic_extractor.find_algorithm(algo)
+
+        for i2, type_run in enumerate(types_run):
+            for i3, meta_step in enumerate(meta_steps[type_run]):
+                inner_steps = order_str_int(basic_extractor.solvers_dict[algorithm][type_run][meta_step].keys())
+                iterate_steps = inner_steps if animate_inner is True else [inner_steps[0]]
+
+                all_points = []
+                for i4, inner_step in enumerate(iterate_steps):
+                    for i5, perplexity in enumerate(perplexities):
+
+                        print(
+                            "Algorithm {}/{} Type_run {}/{} Meta_step {}/{} Inner_step {}/{} Perplexity {}/{}"\
+                                .format(
+                                    i1+1, len(to_highlight),
+                                    i2+1, len(types_run),
+                                    i3+1, len(meta_steps[type_run]),
+                                    i4+1, len(iterate_steps),
+                                    i5+1, len(perplexities)
+                                ),
+                            end="\r"
+                        )
+
+                        points = np.array(perplex_to_extractor[perplexity].get_params(
                             input_algorithm=algo,
                             input_type=type_run,
                             input_meta=meta_step,
                             input_step=inner_step
                         ))
+                        
+                        if i4 == 0:
+                            objects[i5][0].set_data(points[:,0], points[:,1])
 
-                        axs[k].scatter(points[:, 0], points[:, 1],
-                            label=algo, color=color, marker=marker)
+                            if i5 == 0 and i3 == 0 and i2 == 0:
+                                fig.legend(*axs[i5].get_legend_handles_labels())
 
-                        axs[k].set_title("Perplexity: {}".format(perplexity))
+                        else:
+                            
+                            for p in points:
+                                all_points.append(p)
 
-                    fig.legend(*axs[0].get_legend_handles_labels())
+                            plt_points = np.array(all_points)
+    
+                            objects[i5][1].set_data(plt_points[:,0], plt_points[:,1])       
+
                     plt.suptitle(base_title.format(algo, type_run, meta_step, inner_step))
-
                     movie_writer.grab_frame()
 
+                else:
+                    # Erasing the previous pop for the next meta-step
+                    for i5, perplexity in enumerate(perplexities):
+                        objects[i5][1].set_data([], [])
+    
+    print("Wrapping up..", end='\r')
     movie_writer.finish()
+    print("Done")

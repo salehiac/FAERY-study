@@ -1,0 +1,11 @@
+{
+    "filerange": ["QD"],
+    "start":0, "end":59,
+
+    "path":"data/FAERY/", "basename":"FAERY_{}_-1",
+    
+    "title": "Performances de FAERY appliqué à {} sur 75x200 steps\nmoyenne sur 25 tâches",
+    "colors": {"train": ["dodgerblue", "lightblue"], "test": ["indianred", "pink"]},
+
+    "save_basename": "Results_{}"
+}

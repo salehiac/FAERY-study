@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import shutil
+import argparse
 import subprocess
 import os
 import sys
@@ -283,3 +284,27 @@ def get_sum_of_model_params(mdl):
     x = [x.sum().item() for x in mdl.parameters() if x.requires_grad]
 
     return sum(x)
+
+
+def get_path(parser=None, to_parse=True, default="./results.json", verbose=True):
+    """
+    Returns the queried path
+    """
+
+    if parser is None:
+        parser = parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--path_params",
+        type=str,
+        help="path to the json file",
+        default=default
+    )
+
+    path = parser.parse_args().path_params
+    if path[-5:] != ".json":    path += ".json"
+
+    if verbose is True:
+        print("Loaded parameters from {}".format(path))
+
+    return path if to_parse is True else parser

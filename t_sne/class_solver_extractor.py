@@ -105,7 +105,18 @@ class SolverExtractor:
 
         return solvers_from_algo
 
-    
+    def find_algorithm(self, abreviation):
+        """
+        Returns the full name of the given abreviation
+        """
+
+        for algorithm in self.algorithms:
+            if abreviation in algorithm:
+                return algorithm
+        
+        raise ValueError("Algorithm {} not found amongst {}".format(abreviation, self.algorithms))
+
+
 if __name__=="__main__":
 
     s = SolverExtractor(load_path="./data")
