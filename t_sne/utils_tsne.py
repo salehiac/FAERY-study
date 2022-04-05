@@ -95,21 +95,23 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max
 
 def plot_highlight(
     perplexities, perplex_to_extractor,
+    fig=None, axs=None, legend=False,
     to_highlight={}, base_color="blue", box_size=12, marker='o',
     title="", save_path=None, save_name=""):
     """
     Plots the TSNEs at different perplexities and highlights the given algorithms
     """
 
-    fig, axs = plt.subplots(
-        figsize=(box_size * len(perplexities), box_size),
-        ncols=len(perplexities)
-    )
+    if fig is None or axs is None:
+        fig, axs = plt.subplots(
+            figsize=(box_size * len(perplexities), box_size),
+            ncols=len(perplexities)
+        )
 
-    fig.tight_layout(rect=[0, 0, 1, .90])
+        fig.tight_layout(rect=[0, 0, 1, .90])
 
-    if len(perplexities) == 1:
-        axs = [axs]
+        if len(perplexities) == 1:
+            axs = [axs]
     
     for i, perplexity in enumerate(perplexities):
         extractor = perplex_to_extractor[perplexity]
@@ -117,44 +119,46 @@ def plot_highlight(
             label="solvers", color=base_color, marker=marker)
 
         for algo, color in to_highlight.items():
-            points = extractor.get_params(algo)
+            points = extractor.get_params(extractor.find_algorithm(algo))
             axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
                 label=algo, color=color, marker=marker)
         
         axs[i].set_title("Perplexity: {}".format(perplexity))
     
-    fig.legend(*axs[0].get_legend_handles_labels())
+    if legend is True:
+        fig.legend(*axs[0].get_legend_handles_labels())
+
     plt.suptitle(title)
 
-    if save_path is None:
-        plt.show()
-    else:
+    if save_path is not None:
         plt.savefig("{}/{}.png".format(save_path, save_name))
 
 
 def plot_follow(
     perplexities, perplex_to_extractor,
     to_highlight, types_run, meta_steps, animate_inner=True,
+    fig=None, axs=None, movie_writer=None, legend=False,
     background_alpha=.25, inner_alpha=.5,
     base_color="blue", box_size=12, marker='o',
     base_title="{} {} {} {}", save_path=None, save_name="",
-    fps=15, dpi=100):
+    type_writer=animation.PillowWriter, fps=30, dpi=100, time_pause=1.5):
     """
     Animates the TSNE plots for given meta_steps and inner_steps
     """
 
-    fig, axs = plt.subplots(
-        figsize=(box_size * len(perplexities), box_size),
-        ncols=len(perplexities)
-    )
+    if fig is None or axs is None or movie_writer is None:
+        fig, axs = plt.subplots(
+            figsize=(box_size * len(perplexities), box_size),
+            ncols=len(perplexities)
+        )
 
-    fig.tight_layout(rect=[0, 0, 1, .95])
-    
-    if len(perplexities) == 1:
-        axs = [axs]
+        fig.tight_layout(rect=[0, 0, 1, .95])
+        
+        if len(perplexities) == 1:
+            axs = [axs]
 
-    movie_writer = animation.ImageMagickFileWriter(fps=fps)
-    movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
+        movie_writer = type_writer(fps=fps)
+        movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
 
     # Plotting the background solvers
     for k, perplexity in enumerate(perplexities):
@@ -184,7 +188,7 @@ def plot_follow(
                 inner_steps = order_str_int(basic_extractor.solvers_dict[algorithm][type_run][meta_step].keys())
                 iterate_steps = inner_steps if animate_inner is True else [inner_steps[0]]
 
-                all_points = []
+                all_points = {p:[] for p in perplexities}
                 for i4, inner_step in enumerate(iterate_steps):
                     for i5, perplexity in enumerate(perplexities):
 
@@ -206,24 +210,26 @@ def plot_follow(
                             input_meta=meta_step,
                             input_step=inner_step
                         ))
-                        
+
                         if i4 == 0:
                             objects[i5][0].set_data(points[:,0], points[:,1])
 
-                            if i5 == 0 and i3 == 0 and i2 == 0:
+                            if legend is True and i5 == 0 and i3 == 0 and i2 == 0:
                                 fig.legend(*axs[i5].get_legend_handles_labels())
 
                         else:
                             
-                            for p in points:
-                                all_points.append(p)
-
-                            plt_points = np.array(all_points)
+                            all_points[perplexity] += [p for p in points]
     
-                            objects[i5][1].set_data(plt_points[:,0], plt_points[:,1])       
+                            objects[i5][1].set_data([p[0] for p in all_points[perplexity]],
+                                [p[1] for p in all_points[perplexity]])       
 
                     plt.suptitle(base_title.format(algo, type_run, meta_step, inner_step))
                     movie_writer.grab_frame()
+
+                    if i4 == len(inner_steps) - 1:
+                        for _ in range(int(fps * time_pause)):
+                            movie_writer.grab_frame()
 
                 else:
                     # Erasing the previous pop for the next meta-step
@@ -232,4 +238,5 @@ def plot_follow(
     
     print("Wrapping up..", end='\r')
     movie_writer.finish()
+    print()
     print("Done")

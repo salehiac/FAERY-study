@@ -1,17 +1,23 @@
 {
     "nb_samples": 5000,
-    "perplexities": [75],
+    "perplexities": [25, 75],
 
     "load_directory": "./data/solvers/assembly-v2",
     "save_path": "data/Images/solvers/assembly-v2", 
-    "save_basename":"TNSE_{}",
+    "save_basename":"TSNE_{}",
+
+    "is_sequential":false,
 
     "to_highlight": {
-        "QD_-1":"teal"
+        "NS_-1":"dodgerblue",
+        "NS_0":"red",
+        "NS_1":"green"
     },
 
     "to_follow": {
-        "NS_-1": "red"
+        "NS_-1":"dodgerblue",
+        "NS_0":"red",
+        "NS_1":"green"
     },
 
     "params_plot": {
@@ -25,7 +31,8 @@
         "inner_alpha":0.25,
         "types_run": ["train"],
         "animate_inner": true,
-        "fps": 4,
-        "dpi": 100
+        "fps": 14,
+        "dpi": 100,
+        "time_pause": 1.5
     }
 }

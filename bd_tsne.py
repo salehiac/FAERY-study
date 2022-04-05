@@ -1,4 +1,5 @@
 import json
+import matplotlib.animation as animation
 
 from utils_misc import get_path
 from t_sne.utils_tsne import *
@@ -52,30 +53,78 @@ if __name__ == "__main__":
     )
 
     print("Plotting highlight")
-    plot_highlight(
-
-        to_highlight=params["to_highlight"],
-
-        title=title_highlight,
-        save_path=params["save_path"],
-        save_name=params["save_basename"].format("highlighted"),
+    tmp_params = {
+        'title': title_highlight,
+        'save_name': params["save_basename"].format("highlighted"),
 
         **params_data,
         **params["params_plot"],
-    )
+    }
+
+    save_path = params["save_path"]
+    save_name = params["save_basename"].format("highlighted")
+
+    if params["is_sequential"] is True:
+
+        plot_highlight(
+            to_highlight=params["to_highlight"],
+            save_path=save_path,
+            legend=True,
+            **tmp_params
+        )
+
+    else:
+
+        box_size = params["params_plot"]["box_size"]
+        perplexities = params["perplexities"]
+        to_highlight = params["to_highlight"]
+        
+        fig, axs = plt.subplots(
+            figsize=(box_size * len(perplexities), box_size * len(to_highlight)),
+            nrows=len(to_highlight), ncols=len(perplexities)
+        )
+
+        fig.tight_layout(rect=[0, 0, 1, .90])
+
+        if len(perplexities) == 1:
+            axs = [[axs[k]] for k in range(len(axs))]
+
+        for i, tmp_highlight in enumerate(to_highlight.items()):
+
+            plot_highlight(
+                fig=fig, axs=axs[i],
+
+                to_highlight={tmp_highlight[0]:tmp_highlight[1]},
+                save_path=None,
+
+                **tmp_params
+            )
+
+        handles, labels = [], []
+        for i, ax in enumerate(axs):
+            h, l = ax[0].get_legend_handles_labels()
+            handles += h[int(i>0):]
+            labels += l[int(i>0):]
+        
+        fig.legend(handles, labels)
+
+        plt.savefig("{}/{}.png".format(save_path, save_name))
+
 
     print("Computing animation")
     for algo, color in params["to_follow"].items():
-        temp_to_follow = {algo:color}
+        tmp_to_follow = {algo:color}
 
         plot_follow(
 
-            to_highlight=temp_to_follow,
-            meta_steps={"train": extractor.meta_steps["train"]},
+            to_highlight=tmp_to_follow,
+            
+            save_name=params["save_basename"].format("{}_animated").format(algo),
+            save_path=params["save_path"],
 
             base_title=title_animation,
-            save_path=params["save_path"],
-            save_name=params["save_basename"].format("{}_animated".format(algo)),
+            
+            meta_steps={"train": ['0','1','2','3','4']},
 
             **params_data,
             **params["params_plot"],
