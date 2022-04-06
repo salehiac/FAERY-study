@@ -8,10 +8,12 @@ import matplotlib.animation as animation
 from sklearn.manifold import TSNE
 
 
-def get_files(path:str, basename:str) -> dict:
+def get_files(path:str, basename:str = "solvers", basenames:list(str) = None) -> dict:
     """
     Returns all path's basename content as dict classifying them by algorithm and meta-step
     """
+
+    if basenames == None:   basenames = [basename]
 
     warning_text = "Please be mindful to provide a path of algorithms' folders with unique names."
     print(warning_text, end='\r')
@@ -48,10 +50,22 @@ def get_files(path:str, basename:str) -> dict:
             continue
 
         for name in files:
-            if basename in name:
-                with open(os.path.join(root, name), 'rb') as f:
-                    inner_step = name[len(basename)+1:-4]
-                    algo_dict[algorithm][type_run][meta_step][inner_step] = pickle.load(f)
+            for i, bn in enumerate(basenames):
+                if bn in name:
+
+                    inner_step = name[len(bn)+1:-4]
+
+                    with open(os.path.join(root, name), 'rb') as f:
+                        if len(basenames) == 1:
+                            algo_dict[algorithm][type_run][meta_step][inner_step] = pickle.load(
+                            f)
+                        
+                        else:
+                            if i == 0:
+                                algo_dict[algorithm][type_run][meta_step][inner_step] = [
+                                    None for _ in basenames]
+                            algo_dict[algorithm][type_run][meta_step][inner_step][i] = pickle.load(
+                                f)
 
     return algo_dict
 
@@ -96,7 +110,12 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max
 def plot_highlight(
     perplexities, perplex_to_extractor,
     fig=None, axs=None, legend=False,
-    to_highlight={}, base_color="blue", box_size=12, marker='o',
+
+    base_label="all agents", base_color="blue", base_alpha=.25,
+    prior_pop_label="prior population", prior_pop_color="red",
+    solvers_label="solvers", solvers_alpha=.5,
+
+    to_highlight={},  box_size=12, marker='o',
     title="", save_path=None, save_name=""):
     """
     Plots the TSNEs at different perplexities and highlights the given algorithms
@@ -116,12 +135,27 @@ def plot_highlight(
     for i, perplexity in enumerate(perplexities):
         extractor = perplex_to_extractor[perplexity]
         axs[i].scatter(np.array(extractor.list)[:, 0], np.array(extractor.list)[:, 1],
-            label="solvers", color=base_color, marker=marker)
+            label=base_label, color=base_color, alpha=base_alpha, marker=marker)
 
         for algo, color in to_highlight.items():
             points = extractor.get_params(extractor.find_algorithm(algo))
-            axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
-                label=algo, color=color, marker=marker)
+
+            # Check if points come from parameters dict
+            if len(points) == 2:
+                prior_pop = np.array(points[0])
+                solvers = np.array(points[1])
+                
+                base_name = "{} {}".format(algo, "{}")
+
+                axs[i].scatter(prior_pop[:, 0], prior_pop[:, 1],
+                    label=base_name.format(prior_pop_label), color=prior_pop_color, marker=marker)
+                
+                axs[i].scatter(solvers[:, 0], solvers[:, 1],
+                    label=base_name.format(solvers_label), color=prior_pop_color, alpha=solvers_alpha, marker=marker)
+            
+            else:
+                axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
+                    label=algo, color=color, marker=marker)
         
         axs[i].set_title("Perplexity: {}".format(perplexity))
     

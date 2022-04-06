@@ -3,7 +3,7 @@ import matplotlib.animation as animation
 
 from utils_misc import get_path
 from t_sne.utils_tsne import *
-from t_sne.class_solver_extractor import SolverExtractor
+from t_sne.class_solver_extractor import SolverExtractor, ParamsExtractor
 
 
 with open(get_path(default="tsne.json"), 'r') as f:
@@ -42,6 +42,7 @@ if __name__ == "__main__":
 
     print("Plotting")
     plot_highlight(
+        base_label="solvers",
         to_highlight={},
 
         title=title_bland,
@@ -67,6 +68,7 @@ if __name__ == "__main__":
     if params["is_sequential"] is True:
 
         plot_highlight(
+            base_label="solvers",
             to_highlight=params["to_highlight"],
             save_path=save_path,
             legend=True,
@@ -93,6 +95,8 @@ if __name__ == "__main__":
 
             plot_highlight(
                 fig=fig, axs=axs[i],
+                
+                base_label="solvers",
 
                 to_highlight={tmp_highlight[0]:tmp_highlight[1]},
                 save_path=None,
