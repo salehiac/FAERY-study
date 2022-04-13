@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 from typing import List
-from pickle import UnpicklingError
 
 from sklearn.manifold import TSNE
 
@@ -22,7 +21,7 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
     print(warning_text, end='\r')
     print(len(warning_text) * " ", end="\r")
 
-    algo_dict = {}
+    list_algo_dict = [{} for _ in range(len(basenames))]
     for root, dirs, files in os.walk(path):
 
         new_root, new_name = os.path.split(root)
@@ -34,17 +33,18 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
 
             if "FAERY" not in algorithm:
                 raise ValueError
-                
-            if algorithm not in algo_dict.keys():
-
-                algo_dict[algorithm] = {
-                    "train": {},
-                    "test": {}
-                }
             
-            if meta_step not in algo_dict[algorithm][type_run].keys():
-                algo_dict[algorithm][type_run][meta_step] = {}
+            for algo_dict in list_algo_dict:
 
+                if algorithm not in algo_dict.keys():               
+                    algo_dict[algorithm] = {
+                        "train": {},
+                        "test": {}
+                    }
+                
+                if meta_step not in algo_dict[algorithm][type_run].keys():
+                    algo_dict[algorithm][type_run][meta_step] = {}
+                
         except ValueError:
             # Raised if sub_folder's name is invalid
             continue
@@ -53,12 +53,9 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
             continue
 
         for name in files:
-            content = None
             for i, bn in enumerate(basenames):
+                
                 if bn in name:
-                    
-                    inner_step = name[len(bn)+1:-4]
-
                     
                     with open(os.path.join(root, name), 'rb') as f:
                         content = []
@@ -68,18 +65,10 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
                                 content += tmp
                             except:
                                 break
-
-                        if len(basenames) == 1:
-                            algo_dict[algorithm][type_run][meta_step][inner_step] = content
                         
-                        else:
-                            if inner_step not in algo_dict[algorithm][type_run][meta_step]:
-                                algo_dict[algorithm][type_run][meta_step][inner_step] = [
-                                    None for _ in basenames]
+                        list_algo_dict[i][algorithm][type_run][meta_step][name[len(bn)+1:-4]] = content
                             
-                            algo_dict[algorithm][type_run][meta_step][inner_step][i] = content
-                            
-    return algo_dict
+    return list_algo_dict
 
 
 def order_str_int(input_set) -> list:
@@ -91,9 +80,11 @@ def order_str_int(input_set) -> list:
     return list(map(str, ordered))
 
 
-def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max_samples=5000) -> dict:
+def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max_samples=5000,
+    to_val=[lambda x: x._behavior_descr[0]]) -> dict:
     """
     Returns the computed tsne of the input list for all given perplexities
+    to_extract: "bd" or "param"
     """
 
     nb_to_compute = min(max_samples, len(input_list))
@@ -112,8 +103,8 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max
         if verbose is True:
             print("Computing for {} perplexity".format(perplexity), end='\r')
 
-        solvers_bds = np.array([ag._behavior_descr[0] for ag in solvers_to_compute]).reshape(-1,1)
-        solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solvers_bds)
+        solver_points = np.array([to_val(ag) for ag in solvers_to_compute]).reshape(-1,1)
+        solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solver_points)
         perplexity_to_embedding[perplexity] = solvers_embedding
     
     return perplexity_to_embedding  

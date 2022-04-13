@@ -1,12 +1,16 @@
 {
     "nb_samples": 5000,
-    "perplexities": [25, 75],
+    "perplexities": [25],
 
     "load_directory": "./data/assembly-v2",
     "save_path": "data/Images/assembly-v2", 
     "save_basename":"TSNE_{}",
 
-    "type_extractor":"parameters",
+    "param_to_solver":true,
+
+    "bland":true,
+    "highlight":false,
+    "follow":false, 
 
     "is_sequential":false,
 
@@ -15,6 +19,8 @@
         "NS_0":"red",
         "NS_1":"green"
     },
+
+    "meta_steps":{"train": ["0","1","2","3","4"]},
 
     "to_follow": {
         "NS_-1":"dodgerblue",

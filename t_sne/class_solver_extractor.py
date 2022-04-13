@@ -30,7 +30,7 @@ class SolverExtractor:
         self.list = self.flattened
     
     def _get_files(self, path) -> dict:
-        return get_files(path, basename="solvers")
+        return get_files(path, basename="solvers")[0]
     
     def _flatten(self) -> list:
         """
@@ -115,79 +115,6 @@ class SolverExtractor:
                 return algorithm
         
         raise ValueError("Algorithm {} not found amongst {}".format(abreviation, self.algorithms))
-
-
-class ParamsExtractor(SolverExtractor):
-    """
-    Able to flatten an extracted parameters_dict and to unpack it.
-    Useful for plotting purposes
-    """
-
-    def __init__(self, solvers_dict=None, load_path=None) -> None:
-        super().__init__(solvers_dict=solvers_dict, load_path=load_path)
-    
-    def _get_files(self, path) -> dict:
-        """
-        Retrieves the files, note that the resulting dict's atom is now a list
-        """
-        return get_files(path, basenames=["population_gen", "solvers"])
-    
-    def _flatten(self) -> list:
-        """
-        Flattens the input solvers_dict
-        Note that now there are 2 objects in the dict
-        """
-
-        solvers_list = []
-
-        for algorithm in self.algorithms:
-            for type_run in self.type_runs:
-                for meta_step in self.meta_steps[type_run]:
-                    inter_dict = self.solvers_dict[algorithm][type_run][meta_step]
-                    for inner_step in order_str_int(inter_dict.keys()):
-
-                        self.position_in_list[(
-                            algorithm,
-                            type_run,
-                            meta_step,
-                            inner_step
-                        )] = (
-                            len(solvers_list), #start
-                            len(solvers_list) + 2 * len(inter_dict[inner_step]) #end
-                        )
-
-                        tmp_list = list(inter_dict[inner_step])
-                        # solvers_list = pop_gen + solvers
-                        solvers_list += list(tmp_list[0]) + list(tmp_list[1])
-        
-        return solvers_list
-
-    def unpack(self, input_list) -> dict:
-        """
-        Unpacks a given list according the saved solvers_dict
-        """
-
-        output_dict = {}
-
-        for algorithm in self.algorithms:
-            output_dict[algorithm] = {}
-            for type_run in self.type_runs:
-                output_dict[algorithm][type_run] = {}
-                for meta_step in self.meta_steps[type_run]:
-                    output_dict[algorithm][type_run][meta_step] = {}
-                    for inner_step in order_str_int(self.solvers_dict[algorithm][type_run][meta_step].keys()):
-                        # start and end are now multiples of 2
-                        start, end = self.position_in_list[
-                            algorithm, type_run, meta_step, inner_step
-                        ]
-
-                        pop_gen = input_list[start:end//2]
-                        solvers = input_list[end//2:end]
-
-                        output_dict[algorithm][type_run][meta_step][inner_step] = \
-                            [pop_gen, solvers]
-
-        return output_dict
 
 
 if __name__=="__main__":
