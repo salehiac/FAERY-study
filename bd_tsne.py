@@ -18,8 +18,13 @@ title_animation = "{} ({}), meta-step={}, inner_step={}"
 
 if __name__ == "__main__":
 
+    type_extractor = SolverExtractor
+    request = params["type_extractor"].lower() 
+    if "params" in request or "parameters" in request:
+        type_extractor = ParamsExtractor
+
     print("Retrieving files in {}".format(params["load_directory"]))
-    extractor = SolverExtractor(load_path=params["load_directory"])
+    extractor = type_extractor(load_path=params["load_directory"])
 
     print("Computing TSNEs")
     perplex_to_tsne = compute_tsne(
@@ -31,7 +36,7 @@ if __name__ == "__main__":
 
     print("Unpacking TSNEs")
     perplex_to_extractor = {
-        p: SolverExtractor(solvers_dict=extractor.unpack(perplex_to_tsne[p]))
+        p: type_extractor(solvers_dict=extractor.unpack(perplex_to_tsne[p]))
         for p in perplex_to_tsne.keys()
     }
 
@@ -42,7 +47,7 @@ if __name__ == "__main__":
 
     print("Plotting")
     plot_highlight(
-        base_label="solvers",
+        base_label="prior_population",
         to_highlight={},
 
         title=title_bland,

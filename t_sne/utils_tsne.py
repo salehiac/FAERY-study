@@ -5,10 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from typing import List
+from pickle import UnpicklingError
+
 from sklearn.manifold import TSNE
 
 
-def get_files(path:str, basename:str = "solvers", basenames:list(str) = None) -> dict:
+def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) -> dict:
     """
     Returns all path's basename content as dict classifying them by algorithm and meta-step
     """
@@ -50,23 +53,32 @@ def get_files(path:str, basename:str = "solvers", basenames:list(str) = None) ->
             continue
 
         for name in files:
+            content = None
             for i, bn in enumerate(basenames):
                 if bn in name:
-
+                    
                     inner_step = name[len(bn)+1:-4]
 
+                    
                     with open(os.path.join(root, name), 'rb') as f:
+                        content = []
+                        while True:
+                            try:
+                                tmp = pickle.load(f)
+                                content += tmp
+                            except:
+                                break
+
                         if len(basenames) == 1:
-                            algo_dict[algorithm][type_run][meta_step][inner_step] = pickle.load(
-                            f)
+                            algo_dict[algorithm][type_run][meta_step][inner_step] = content
                         
                         else:
-                            if i == 0:
+                            if inner_step not in algo_dict[algorithm][type_run][meta_step]:
                                 algo_dict[algorithm][type_run][meta_step][inner_step] = [
                                     None for _ in basenames]
-                            algo_dict[algorithm][type_run][meta_step][inner_step][i] = pickle.load(
-                                f)
-
+                            
+                            algo_dict[algorithm][type_run][meta_step][inner_step][i] = content
+                            
     return algo_dict
 
 

@@ -2,9 +2,11 @@
     "nb_samples": 5000,
     "perplexities": [25, 75],
 
-    "load_directory": "./data/solvers/assembly-v2",
-    "save_path": "data/Images/solvers/assembly-v2", 
+    "load_directory": "./data/assembly-v2",
+    "save_path": "data/Images/assembly-v2", 
     "save_basename":"TSNE_{}",
+
+    "type_extractor":"parameters",
 
     "is_sequential":false,
 

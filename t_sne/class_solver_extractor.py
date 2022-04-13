@@ -158,7 +158,7 @@ class ParamsExtractor(SolverExtractor):
 
                         tmp_list = list(inter_dict[inner_step])
                         # solvers_list = pop_gen + solvers
-                        solvers_list += tmp_list[0] + tmp_list[1]
+                        solvers_list += list(tmp_list[0]) + list(tmp_list[1])
         
         return solvers_list
 
