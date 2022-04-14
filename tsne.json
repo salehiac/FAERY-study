@@ -6,6 +6,7 @@
     "save_path": "data/Images/assembly-v2", 
     "save_basename":"TSNE_{}",
 
+    "param_or_solver":"param",
     "param_to_solver":true,
 
     "bland":true,

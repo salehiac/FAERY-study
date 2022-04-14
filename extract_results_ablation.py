@@ -1,7 +1,30 @@
 import json
+import argparse
 
-from utils_misc import get_path
 from utils_extract import *
+
+def get_path(parser=None, to_parse=True, default="./results.json", verbose=True):
+    """
+    Returns the queried path
+    """
+
+    if parser is None:
+        parser = parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--path_params",
+        type=str,
+        help="path to the json file",
+        default=default
+    )
+
+    path = parser.parse_args().path_params
+    if path[-5:] != ".json":    path += ".json"
+
+    if verbose is True:
+        print("Loaded parameters from {}".format(path))
+
+    return path if to_parse is True else parser
 
 
 with open(get_path(default="results_ablation.json"), 'r') as f:

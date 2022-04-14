@@ -4,8 +4,8 @@
         "NS":[0,59]
         },
     "removed_obj": [-1, 0, 1],
-    "path": "data/solvers/assembly-v2/", "basename": "FAERY_{}",
-    "save_path": "data/Images/solvers/assembly-v2",
+    "path": "data/assembly-v2/", "basename": "FAERY_{}",
+    "save_path": "data/Images/assembly-v2",
     
     "solo": true,
     "compare": true,
