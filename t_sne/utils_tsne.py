@@ -1,6 +1,7 @@
 import os
 import pickle
 import random
+from cv2 import solve
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -8,9 +9,10 @@ import matplotlib.animation as animation
 from typing import List
 
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 
-def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) -> dict:
+def get_files(path:str, basename:str = "solvers", basenames:List[str] = None, max_samples:int = 5000) -> dict:
     """
     Returns all path's basename content as dict classifying them by algorithm and meta-step
     """
@@ -21,6 +23,7 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
     print(warning_text, end='\r')
     print(len(warning_text) * " ", end="\r")
 
+    nb_sampled = 0
     list_algo_dict = [{} for _ in range(len(basenames))]
     for root, dirs, files in os.walk(path):
 
@@ -53,6 +56,9 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
             continue
 
         for name in files:
+            if nb_sampled >= max_samples:
+                break
+
             for i, bn in enumerate(basenames):
                 
                 if bn in name:
@@ -67,7 +73,9 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None) ->
                                 break
                         
                         list_algo_dict[i][algorithm][type_run][meta_step][name[len(bn)+1:-4]] = content
-                            
+                        nb_sampled += len(content)
+
+    print("Sampled {} individuals".format(nb_sampled))   
     return list_algo_dict
 
 
@@ -80,30 +88,30 @@ def order_str_int(input_set) -> list:
     return list(map(str, ordered))
 
 
-def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True, max_samples=5000,
-    to_val=[lambda x: x._behavior_descr[0]]) -> dict:
+def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True,
+    to_val=lambda x: x._behavior_descr[0], pca_components=None) -> dict:
     """
     Returns the computed tsne of the input list for all given perplexities
     to_extract: "bd" or "param"
     """
 
-    nb_to_compute = min(max_samples, len(input_list))
-
-    solvers_to_compute = random.sample(
-        input_list,
-        nb_to_compute
-    )
+    solvers_to_compute = input_list[:]
+    solver_points = np.array([to_val(ag).reshape(1,-1)[0] for ag in solvers_to_compute])
     
-    if verbose is True:
-        print("Sampled {} solvers among {} retrieved".format(nb_to_compute, len(input_list)))
+    if pca_components is not None:
+        if type(pca_components) != int:
+            raise ValueError("Please enter a number for the pca_components argument")
+        
+        print("Computung PCA with {} components..".format(pca_components), end='\r')
+        pca = PCA(n_components=pca_components)
+        solver_points = pca.fit_transform(solver_points)
 
     perplexity_to_embedding = {}
     for i, perplexity in enumerate(perplexities):
 
         if verbose is True:
-            print("Computing for {} perplexity".format(perplexity), end='\r')
-
-        solver_points = np.array([to_val(ag) for ag in solvers_to_compute]).reshape(-1,1)
+            print("Computing TSNE for {} perplexity..".format(perplexity), end='\r')
+        
         solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solver_points)
         perplexity_to_embedding[perplexity] = solvers_embedding
     
@@ -277,3 +285,45 @@ def plot_follow(
     movie_writer.finish()
     print()
     print("Done")
+
+
+def distance_euclidian(a, b):
+    return np.sqrt(sum([(a[i] - b[i])**2 for i in range(len(a))]))
+
+
+def k_means(points, n_clusters, min_distance=float('-inf'), distance=distance_euclidian):
+    """
+    Applies K-means algorithm to a given set of points, returns clusters as lists of point index
+    """
+
+    init_points = random.sample(points, len(points))
+
+    clusters = [
+        (init_points[-1], [points.index(init_points.pop())])
+        for _ in range(n_clusters)
+        ] # [(center, point index)]
+
+    point_to_cluster = {
+        ip:None for ip in range(len(points))
+    }
+
+    convergence = False
+    while convergence is False:
+        convergence = True
+
+        for i, point in enumerate(points):
+            distances = [distance(point, cluster[0]) for cluster in clusters]
+            best_distance = distances.index(min(distances))
+
+            if point_to_cluster[i] is not None:
+                clusters[point_to_cluster[i]][-1].remove(i)
+            
+            convergence = convergence and ((best_distance == point_to_cluster[i]) or (best_distance <= min_distance))
+            point_to_cluster[i] = best_distance
+            clusters[best_distance][-1].append(i)
+        
+        for cluster in clusters:
+            if len(cluster[-1]) > 0:
+                cluster[0] = np.mean(cluster[-1], axis=0)
+    
+    return tuple([c[-1] for c in clusters])

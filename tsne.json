@@ -1,17 +1,22 @@
 {
     "nb_samples": 5000,
-    "perplexities": [25],
+    "perplexities": [75],
 
     "load_directory": "./data/assembly-v2",
     "save_path": "data/Images/assembly-v2", 
     "save_basename":"TSNE_{}",
 
-    "param_or_solver":"param",
+    "pca_components": 500,
+
+    "param_or_solver":"params",
+
     "param_to_solver":true,
+    "titles_side":["Parameter space {} perplexity and PCA of {} components", "Behavioral space {} perplexity"],
 
     "bland":true,
-    "highlight":false,
-    "follow":false, 
+    "highlight":true,
+    "follow":false,
+    "clustering":true,
 
     "is_sequential":false,
 

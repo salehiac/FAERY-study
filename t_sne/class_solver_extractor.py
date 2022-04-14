@@ -7,9 +7,9 @@ class SolverExtractor:
     Useful for plotting purposes
     """
 
-    def __init__(self, solvers_dict=None, load_path=None) -> None:
+    def __init__(self, solvers_dict=None, load_path=None, max_samples=5000) -> None:
         self.solvers_dict = solvers_dict if solvers_dict is not None \
-            else self._get_files(load_path) if load_path is not None \
+            else self._get_files(load_path, max_samples=max_samples) if load_path is not None \
                 else None
 
         if self.solvers_dict is None:
@@ -29,8 +29,8 @@ class SolverExtractor:
         self.flattened = self._flatten()
         self.list = self.flattened
     
-    def _get_files(self, path) -> dict:
-        return get_files(path, basename="solvers")[0]
+    def _get_files(self, path, max_samples) -> dict:
+        return get_files(path, basename="solvers", max_samples=max_samples)[0]
     
     def _flatten(self) -> list:
         """

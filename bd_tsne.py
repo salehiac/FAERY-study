@@ -1,9 +1,10 @@
 import json
-import matplotlib.animation as animation
+from sklearn.decomposition import PCA
+
 
 from utils_misc import get_path
 from t_sne.utils_tsne import *
-from t_sne.class_solver_extractor import SolverExtractor, CollectionExtractor
+from t_sne.class_solver_extractor import SolverExtractor
 
 
 with open(get_path(default="tsne.json"), 'r') as f:
@@ -19,7 +20,7 @@ title_animation = "{} ({}), meta-step={}, inner_step={}"
 if __name__ == "__main__":
 
     print("Retrieving files in {}".format(params["load_directory"]))
-    extractor = SolverExtractor(load_path=params["load_directory"])
+    extractor = SolverExtractor(load_path=params["load_directory"], max_samples=params["nb_samples"])
 
     print("Computing TSNEs")
     list_to_val = [
@@ -34,18 +35,18 @@ if __name__ == "__main__":
         compute_tsne(
             input_list=extractor.list,
             perplexities=params["perplexities"],
-            max_samples=params["nb_samples"],
             verbose=True,
-            to_val=to_val
-        ) for to_val in list_to_val
+            to_val=to_val,
+            pca_components=params["pca_components"] if i == 0 and params["param_to_solver"] is True else None
+        ) for i, to_val in enumerate(list_to_val)
     ]
     
     print("Unpacking TSNEs")
     list_perplex_to_extractor = [
         {
-        p: SolverExtractor(solvers_dict=e.unpack(list_perplex_to_tsne[i][p]))
+        p: SolverExtractor(solvers_dict=extractor.unpack(list_perplex_to_tsne[i][p]))
         for p in list_perplex_to_tsne[i].keys()
-        } for i, e in enumerate(extractor.extractors)
+        } for i in range(len(list_to_val))
     ]
 
     if params["param_to_solver"] is False:
@@ -192,9 +193,13 @@ if __name__ == "__main__":
                     **params["params_plot"],
                 )
 
+                # if i == 0:
+                #     axs[i].set_title(params["titles_side"][i].format("{}", params["pca_components"]))
+                # axs[i].set_title(params["titles_side"][i].format(perplexities[0]))
+
             handles, labels = [], []
             for i, ax in enumerate(axs):
-                h, l = ax[0].get_legend_handles_labels()
+                h, l = ax.get_legend_handles_labels()
                 handles += h[int(i>0):]
                 labels += l[int(i>0):]
             
@@ -226,7 +231,7 @@ if __name__ == "__main__":
                     for k, perplex_to_extractor in enumerate(list_perplex_to_extractor):
 
                         plot_highlight(
-                            fig=fig, axs=axs[i][k],
+                            fig=fig, axs=[axs[i][k]],
                             
                             base_label="solvers",
 
@@ -237,6 +242,10 @@ if __name__ == "__main__":
 
                             **tmp_params
                         )
+                        
+                        # if k == 0:
+                        #     axs[i][k].set_title(params["titles_side"][k].format("{}", params["pca_components"]))
+                        # axs[i][k].set_title(params["titles_side"][k].format(perplexities[0]))
 
                     handles, labels = [], []
                     for i, ax in enumerate(axs):
