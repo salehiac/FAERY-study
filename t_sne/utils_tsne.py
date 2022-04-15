@@ -1,7 +1,6 @@
 import os
 import pickle
 import random
-from cv2 import solve
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -10,6 +9,7 @@ from typing import List
 
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from sklearn.cluster import MeanShift, estimate_bandwidth
 
 
 def get_files(path:str, basename:str = "solvers", basenames:List[str] = None, max_samples:int = 5000) -> dict:
@@ -106,16 +106,18 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True,
         pca = PCA(n_components=pca_components)
         solver_points = pca.fit_transform(solver_points)
 
+    perplexity_to_tsne = {}
     perplexity_to_embedding = {}
     for i, perplexity in enumerate(perplexities):
 
         if verbose is True:
             print("Computing TSNE for {} perplexity..".format(perplexity), end='\r')
         
-        solvers_embedding = TSNE(n_components=2, perplexity=perplexity).fit_transform(solver_points)
+        perplexity_to_tsne[perplexity] = TSNE(n_components=2, perplexity=perplexity) # useful to gather posterior info
+        solvers_embedding = perplexity_to_tsne[perplexity].fit_transform(solver_points)
         perplexity_to_embedding[perplexity] = solvers_embedding
     
-    return perplexity_to_embedding  
+    return perplexity_to_tsne, perplexity_to_embedding  
 
 
 def plot_highlight(
@@ -180,7 +182,7 @@ def plot_highlight(
 
 
 def plot_follow(
-    perplexities, perplex_to_extractor,
+    perplexities, list_perplex_to_extractor,
     to_highlight, types_run, meta_steps, animate_inner=True,
     fig=None, axs=None, movie_writer=None, legend=False,
     background_alpha=.25, inner_alpha=.5,
@@ -191,7 +193,7 @@ def plot_follow(
     Animates the TSNE plots for given meta_steps and inner_steps
     """
 
-    if fig is None or axs is None or movie_writer is None:
+    if fig is None or axs is None:
         fig, axs = plt.subplots(
             figsize=(box_size * len(perplexities), box_size),
             ncols=len(perplexities)
@@ -200,30 +202,35 @@ def plot_follow(
         fig.tight_layout(rect=[0, 0, 1, .95])
         
         if len(perplexities) == 1:
-            axs = [axs]
+            axs = [[axs]]
 
+    if  movie_writer is None:
         movie_writer = type_writer(fps=fps)
         movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
 
     # Plotting the background solvers
     for k, perplexity in enumerate(perplexities):
-        points = np.array(perplex_to_extractor[perplexity].list)
-        axs[k].scatter(points[:, 0], points[:, 1],
-            label="solvers", color=base_color, marker=marker, alpha=background_alpha)
-        axs[k].set_title("Perplexity: {}".format(perplexity))
+        for i, perplex_to_extractor in enumerate(list_perplex_to_extractor):
+            points = np.array(perplex_to_extractor[perplexity].list)
+            axs[k][i].scatter(points[:, 0], points[:, 1],
+                label="solvers", color=base_color, marker=marker, alpha=background_alpha)
+            axs[k][i].set_title("Perplexity: {}".format(perplexity))
 
     # Extractors all have the same structure, just not the same values
-    basic_extractor = list(perplex_to_extractor.values())[0]
+    basic_extractor = list(list_perplex_to_extractor[0].values())[0]
     
     # Animation
     for i1, (algo, color) in enumerate(to_highlight.items()):
 
         objects = [
-            (
-                axs[k].plot([], [], label=algo, color=color, marker=marker, alpha=1, linestyle='None')[0],
-                axs[k].plot([], [], label=algo, color=color, marker=marker, alpha=inner_alpha, linestyle='None')[0],
-            )
-            for k in range(len(perplexities))
+            [
+                (
+                    axs[k][i].plot([], [], label=algo, color=color, marker=marker, alpha=1, linestyle='None')[0],
+                    axs[k][i].plot([], [], label=algo, color=color, marker=marker, alpha=inner_alpha, linestyle='None')[0],
+                )
+                for k in range(len(perplexities))
+            ]
+            for i in range(len(list_perplex_to_extractor))
         ]
 
         algorithm = basic_extractor.find_algorithm(algo)
@@ -233,7 +240,7 @@ def plot_follow(
                 inner_steps = order_str_int(basic_extractor.solvers_dict[algorithm][type_run][meta_step].keys())
                 iterate_steps = inner_steps if animate_inner is True else [inner_steps[0]]
 
-                all_points = {p:[] for p in perplexities}
+                all_points = [{p:[] for p in perplexities} for k in range(len(list_perplex_to_extractor))]
                 for i4, inner_step in enumerate(iterate_steps):
                     for i5, perplexity in enumerate(perplexities):
 
@@ -249,25 +256,26 @@ def plot_follow(
                             end="\r"
                         )
 
-                        points = np.array(perplex_to_extractor[perplexity].get_params(
-                            input_algorithm=algo,
-                            input_type=type_run,
-                            input_meta=meta_step,
-                            input_step=inner_step
-                        ))
+                        for k, perplex_to_extractor in enumerate(list_perplex_to_extractor):
+                            points = np.array(perplex_to_extractor[perplexity].get_params(
+                                input_algorithm=algo,
+                                input_type=type_run,
+                                input_meta=meta_step,
+                                input_step=inner_step
+                            ))
 
-                        if i4 == 0:
-                            objects[i5][0].set_data(points[:,0], points[:,1])
+                            if i4 == 0:
+                                objects[k][i5][0].set_data(points[:,0], points[:,1])
 
-                            if legend is True and i5 == 0 and i3 == 0 and i2 == 0:
-                                fig.legend(*axs[i5].get_legend_handles_labels())
+                                if legend is True and i5 == 0 and i3 == 0 and i2 == 0:
+                                    fig.legend(*axs[i5].get_legend_handles_labels())
 
-                        else:
-                            
-                            all_points[perplexity] += [p for p in points]
-    
-                            objects[i5][1].set_data([p[0] for p in all_points[perplexity]],
-                                [p[1] for p in all_points[perplexity]])       
+                            else:
+                                
+                                all_points[k][perplexity] += [p for p in points]
+        
+                                objects[k][i5][1].set_data([p[0] for p in all_points[k][perplexity]],
+                                    [p[1] for p in all_points[k][perplexity]])       
 
                     plt.suptitle(base_title.format(algo, type_run, meta_step, inner_step))
                     movie_writer.grab_frame()
@@ -279,29 +287,30 @@ def plot_follow(
                 else:
                     # Erasing the previous pop for the next meta-step
                     for i5, perplexity in enumerate(perplexities):
-                        objects[i5][1].set_data([], [])
+                        for k in range(len(list_perplex_to_extractor)):
+                            objects[k][i5][1].set_data([], [])
     
-    print("Wrapping up..", end='\r')
-    movie_writer.finish()
-    print()
-    print("Done")
+    if movie_writer is None:
+        print("Wrapping up..", end='\r')
+        movie_writer.finish()
+        print()
+        print("Done")
 
 
 def distance_euclidian(a, b):
+    assert len(a) == len(b), "Objects don't have same length : {} and {}".format(len(a), len(b))
     return np.sqrt(sum([(a[i] - b[i])**2 for i in range(len(a))]))
 
 
-def k_means(points, n_clusters, min_distance=float('-inf'), distance=distance_euclidian):
+def k_means(points, nb_clusters, min_distance=float('-inf'), distance=distance_euclidian):
     """
     Applies K-means algorithm to a given set of points, returns clusters as lists of point index
     """
 
-    init_points = random.sample(points, len(points))
-
     clusters = [
-        (init_points[-1], [points.index(init_points.pop())])
-        for _ in range(n_clusters)
-        ] # [(center, point index)]
+        [points[ipoint], [ipoint]]
+        for ipoint in random.choices(range(len(points)), k=nb_clusters)
+    ] # [(center, point index)]
 
     point_to_cluster = {
         ip:None for ip in range(len(points))
@@ -313,17 +322,134 @@ def k_means(points, n_clusters, min_distance=float('-inf'), distance=distance_eu
 
         for i, point in enumerate(points):
             distances = [distance(point, cluster[0]) for cluster in clusters]
+
             best_distance = distances.index(min(distances))
 
             if point_to_cluster[i] is not None:
                 clusters[point_to_cluster[i]][-1].remove(i)
             
-            convergence = convergence and ((best_distance == point_to_cluster[i]) or (best_distance <= min_distance))
+            convergence = convergence and \
+                ((best_distance == point_to_cluster[i]) or (distances[best_distance] <= min_distance))
+
             point_to_cluster[i] = best_distance
             clusters[best_distance][-1].append(i)
         
         for cluster in clusters:
-            if len(cluster[-1]) > 0:
-                cluster[0] = np.mean(cluster[-1], axis=0)
+            if len(cluster) >= 0:
+
+                s = [0 for _ in range(len(cluster[0]))]
+                for p in cluster[-1]:
+                    for k, ip in enumerate(points[p]):
+                        s[k] += ip
+                
+                s = [s[i] / len(cluster[0]) for i in range(len(s))]
+                cluster[0] = s
     
     return tuple([c[-1] for c in clusters])
+
+
+def get_nb_clusters(input_array, quantile=.05):
+    """
+    Returns the number of estimated clusters in array
+    """
+
+    bandwidth = estimate_bandwidth(input_array, quantile=quantile, n_samples=len(input_array))
+
+    ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    ms.fit(input_array)
+
+    return len(np.unique(ms.labels_))
+
+
+def plot_clustering(
+    perplexities, list_perplex_to_extractor,
+    perplex_to_nb_clusters,
+    fig=None, axs=None, movie_writer=None,
+    color="red",
+    types_run=None, animate_inner=True,
+    background_alpha=.25, inner_alpha=.5,
+    base_color="blue", box_size=12, marker='o',
+    save_path=None, save_name="",
+    type_writer=animation.PillowWriter, fps=30, dpi=100, time_pause=1.5):
+    
+    """
+    Animates a plot, highlights the parameters space cluster by cluster
+    """
+
+    if fig is None or axs is None:
+        fig, axs = plt.subplots(
+            figsize=(box_size * len(perplexities), box_size),
+            ncols=len(perplexities)
+        )
+
+        fig.tight_layout(rect=[0, 0, 1, .95])
+        
+        if len(perplexities) == 1:
+            axs = [[axs]]
+
+    if  movie_writer is None:
+        movie_writer = type_writer(fps=fps)
+        movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
+
+    for k, perplexity in enumerate(perplexities):
+
+        # Plotting the background solvers
+        for i, perplex_to_extractor in enumerate(list_perplex_to_extractor):
+            points = np.array(perplex_to_extractor[perplexity].list)
+            axs[k][i].scatter(points[:, 0], points[:, 1],
+                label="solvers", color=base_color, marker=marker, alpha=background_alpha)
+            axs[k][i].set_title("Perplexity: {}".format(perplexity))
+    
+        # Retrieve the clusters from the parameters space
+        perplex_to_clusters = {
+            perplexity:k_means(
+                points=list_perplex_to_extractor[0][perplexity].list,
+                nb_clusters=perplex_to_nb_clusters[perplexity],
+                min_distance=0.01
+            )
+            for perplexity in perplexities
+        }
+
+    # Animation
+    objects = [
+        [
+            axs[k][i].plot([], [], color=color, marker=marker, alpha=1, linestyle='None')[0]
+            for k in range(len(perplexities))
+        ]
+        for i in range(len(list_perplex_to_extractor))
+    ]
+    
+    for i1, perplexity in enumerate(perplexities):
+        for i2, cluster in enumerate(perplex_to_clusters[perplexity]):
+
+            all_points = [[] for _ in range(len(list_perplex_to_extractor))]
+
+            for i3, ipoints in enumerate(cluster):
+                for i4, perplex_to_extractor in enumerate(list_perplex_to_extractor):
+
+                    print("Perplexity {}/{} Cluster {}/{} Point {}/{} Graph {}/{}"\
+                        .format(i1,len(perplexities), i2, len(perplex_to_clusters[perplexity]),
+                        i3, len(cluster), i4, len(list_perplex_to_extractor)),
+                        end="\r")
+
+                    all_points[i4].append(perplex_to_extractor[perplexity].list[ipoints])
+
+                    objects[i4][i1].set_data([point[0] for point in all_points[i4]],
+                                             [point[1] for point in all_points[i4]])
+
+                if animate_inner is True:
+                    movie_writer.grab_frame()
+
+            for _ in range(int(fps * time_pause)):
+                movie_writer.grab_frame()
+            
+            # Erasing the previous pop for the next meta-step
+            for i5, perplexity in enumerate(perplexities):
+                for k in range(len(list_perplex_to_extractor)):
+                    objects[k][i5].set_data([], [])
+    
+    if movie_writer is None:
+        print("Wrapping up..", end='\r')
+        movie_writer.finish()
+        print()
+        print("Done")

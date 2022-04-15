@@ -1,4 +1,6 @@
 import json
+import matplotlib.animation as animation
+
 from sklearn.decomposition import PCA
 
 
@@ -31,16 +33,20 @@ if __name__ == "__main__":
     if params["param_to_solver"] is False:
         list_to_val = [list_to_val[int(params["param_or_solver"] in "solvers")]]
 
-    list_perplex_to_tsne = [
-        compute_tsne(
+    list_perplex_to_tsne = []
+    list_perplex_to_tsne_obj = []
+    for i, to_val in enumerate(list_to_val):
+        tsne_obj, tsne_emb = compute_tsne(   
             input_list=extractor.list,
             perplexities=params["perplexities"],
             verbose=True,
             to_val=to_val,
             pca_components=params["pca_components"] if i == 0 and params["param_to_solver"] is True else None
-        ) for i, to_val in enumerate(list_to_val)
-    ]
-    
+        )
+
+        list_perplex_to_tsne_obj.append(tsne_obj)
+        list_perplex_to_tsne.append(tsne_emb)
+
     print("Unpacking TSNEs")
     list_perplex_to_extractor = [
         {
@@ -135,6 +141,10 @@ if __name__ == "__main__":
 
             if params["follow"] is True:
                 print("Computing animation")
+
+                params_data["list_perplex_to_extractor"] = [params_data["perplex_to_extractor"]]
+                del params_data["perplex_to_extractor"]
+
                 for algo, color in params["to_follow"].items():
                     tmp_to_follow = {algo:color}
 
@@ -256,3 +266,80 @@ if __name__ == "__main__":
                     fig.legend(handles, labels)
 
                     plt.savefig("{}/{}.png".format(save_path, save_name))
+
+        if params["follow"] is True:
+            print("Computing animation")
+
+            fig, axs = plt.subplots(
+                figsize=(box_size * len(list_perplex_to_extractor), box_size),
+                nrows=1, ncols=len(list_perplex_to_extractor)
+            )
+
+            for algo, color in params["to_follow"].items():
+                tmp_to_follow = {algo:color}
+
+                save_name=params["save_basename"].format("{}_animated").format(algo)
+                save_path=params["save_path"]
+
+                movie_writer = animation.PillowWriter(fps=params["params_anim"]["fps"])
+                movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
+                
+                plot_follow(
+                    fig=fig, axs=[axs],
+                    
+                    to_highlight=tmp_to_follow,
+                    list_perplex_to_extractor=list_perplex_to_extractor,
+                    
+                    movie_writer=movie_writer,
+
+                    base_title=title_animation,
+                    
+                    meta_steps=params["meta_steps"] if type(params["meta_steps"]) is not str
+                        else {"train":extractor.meta_steps["train"]},
+
+                    **params_data,
+                    **params["params_plot"],
+                    **params["params_anim"],
+                )
+
+                print("Wrapping up..", end='\r')
+                movie_writer.finish()
+                print()
+                print("Done")
+        
+        if params["clustering"] is True:
+            print("Computing clustering")
+
+            fig, axs = plt.subplots(
+                figsize=(box_size * len(list_perplex_to_extractor), box_size),
+                nrows=1, ncols=len(list_perplex_to_extractor)
+            )
+
+            save_name=params["save_basename"].format("{}_animated").format("clusters")
+            save_path=params["save_path"]
+
+            movie_writer = animation.PillowWriter(fps=params["params_anim"]["fps"])
+            movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
+
+            perplex_to_nb_clusters = {
+                p:get_nb_clusters(list_perplex_to_extractor[0][p].list)
+                for p in perplexities
+            }
+
+            plot_clustering(
+                fig=fig, axs=[axs],
+                
+                list_perplex_to_extractor=list_perplex_to_extractor,
+                perplex_to_nb_clusters=perplex_to_nb_clusters,
+
+                movie_writer=movie_writer,
+
+                **params_data,
+                **params["params_plot"],
+                **params["params_anim"],
+            )
+
+            print("Wrapping up..", end='\r')
+            movie_writer.finish()
+            print()
+            print("Done")
