@@ -3,7 +3,6 @@ import matplotlib.animation as animation
 
 from sklearn.decomposition import PCA
 
-
 from utils_misc import get_path
 from t_sne.utils_tsne import *
 from t_sne.class_solver_extractor import SolverExtractor
@@ -12,11 +11,16 @@ from t_sne.class_solver_extractor import SolverExtractor
 with open(get_path(default="tsne.json"), 'r') as f:
     params = json.load(f)
 
+params["load_directory"] = params["load_directory"].format(params["env"])
+params["save_path"] = params["save_path"].format(params["env"])
 
-title_bland = "TSNE on the behavior descriptors of {} sampled solvers\nin Metworld assembly-v2"\
-    .format(params["nb_samples"])
+
+title_bland = "TSNE on {} sampled solvers\nof Metaworld {}"\
+    .format(params["nb_samples"], params["env"])
 title_highlight = title_bland
 title_animation = "{} ({}), meta-step={}, inner_step={}"
+title_cluster = "TSNE animation of the mapping between parameters and behavior space\n" \
+    + "on {} sampled solvers of Metaworld {}".format(params["nb_samples"], params["env"])
 
 
 if __name__ == "__main__":
@@ -203,9 +207,10 @@ if __name__ == "__main__":
                     **params["params_plot"],
                 )
 
-                # if i == 0:
-                #     axs[i].set_title(params["titles_side"][i].format("{}", params["pca_components"]))
-                # axs[i].set_title(params["titles_side"][i].format(perplexities[0]))
+                if i == 0:
+                    axs[i].set_title(params["titles_side"][i].format(perplexities[0], params["pca_components"]))
+                else:
+                    axs[i].set_title(params["titles_side"][i].format(perplexities[0]))
 
             handles, labels = [], []
             for i, ax in enumerate(axs):
@@ -219,7 +224,7 @@ if __name__ == "__main__":
         
         if params["highlight"] is True:
                 print("Plotting highlight")
-
+                
                 tmp_params = {
                     'title': title_highlight,
                     'save_name': params["save_basename"].format("highlighted"),
@@ -229,7 +234,7 @@ if __name__ == "__main__":
                 }
 
                 to_highlight = params["to_highlight"]
-                    
+
                 fig, axs = plt.subplots(
                     figsize=(box_size * len(list_perplex_to_extractor), box_size * len(to_highlight)),
                     nrows=len(to_highlight), ncols=len(list_perplex_to_extractor)
@@ -250,33 +255,40 @@ if __name__ == "__main__":
 
                             perplex_to_extractor=perplex_to_extractor,
 
+                            subtitle=False,
+
                             **tmp_params
                         )
                         
-                        # if k == 0:
-                        #     axs[i][k].set_title(params["titles_side"][k].format("{}", params["pca_components"]))
-                        # axs[i][k].set_title(params["titles_side"][k].format(perplexities[0]))
+                handles, labels = [], []
+                for i, ax in enumerate(axs):
+                    h, l = ax[0].get_legend_handles_labels()
+                    handles += h[int(i>0):]
+                    labels += l[int(i>0):]
+                
+                fig.legend(handles, labels)
 
-                    handles, labels = [], []
-                    for i, ax in enumerate(axs):
-                        h, l = ax[0].get_legend_handles_labels()
-                        handles += h[int(i>0):]
-                        labels += l[int(i>0):]
-                    
-                    fig.legend(handles, labels)
+                axs[0][0].set_title(params["titles_side"][0].format(perplexities[0], params["pca_components"]))
+                axs[0][1].set_title(params["titles_side"][1].format(perplexities[0]))
 
-                    plt.savefig("{}/{}.png".format(save_path, save_name))
+                plt.savefig("{}/{}.png".format(save_path, tmp_params["save_name"]))
 
         if params["follow"] is True:
             print("Computing animation")
 
-            fig, axs = plt.subplots(
-                figsize=(box_size * len(list_perplex_to_extractor), box_size),
-                nrows=1, ncols=len(list_perplex_to_extractor)
-            )
-
             for algo, color in params["to_follow"].items():
                 tmp_to_follow = {algo:color}
+
+                fig, axs = plt.subplots(
+                figsize=(box_size * len(list_perplex_to_extractor), box_size),
+                nrows=1, ncols=len(list_perplex_to_extractor)
+                )
+
+                for k in range(len(list_perplex_to_extractor)):
+                    if k == 0:
+                        axs[k].set_title(params["titles_side"][k].format(perplexities[0], params["pca_components"]))
+                    else:
+                        axs[k].set_title(params["titles_side"][k].format(perplexities[0]))
 
                 save_name=params["save_basename"].format("{}_animated").format(algo)
                 save_path=params["save_path"]
@@ -293,6 +305,7 @@ if __name__ == "__main__":
                     movie_writer=movie_writer,
 
                     base_title=title_animation,
+                    subtitle=False,
                     
                     meta_steps=params["meta_steps"] if type(params["meta_steps"]) is not str
                         else {"train":extractor.meta_steps["train"]},
@@ -315,28 +328,38 @@ if __name__ == "__main__":
                 nrows=1, ncols=len(list_perplex_to_extractor)
             )
 
+            fig.suptitle(title_cluster)
+
+            for k in range(len(list_perplex_to_extractor)):
+                if k == 0:
+                    axs[k].set_title(params["titles_side"][k].format(perplexities[0], params["pca_components"]))
+                else:
+                    axs[k].set_title(params["titles_side"][k].format(perplexities[0]))
+
             save_name=params["save_basename"].format("{}_animated").format("clusters")
             save_path=params["save_path"]
 
             movie_writer = animation.PillowWriter(fps=params["params_anim"]["fps"])
             movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
 
-            perplex_to_nb_clusters = {
-                p:get_nb_clusters(list_perplex_to_extractor[0][p].list)
-                for p in perplexities
+            perplex_nb_clusters = {
+                p:get_clusters(
+                    input_array=list_perplex_to_extractor[0][p].list,
+                    quantile=params["cluster_quantile"]
+                ) for p in perplexities
             }
 
             plot_clustering(
                 fig=fig, axs=[axs],
                 
                 list_perplex_to_extractor=list_perplex_to_extractor,
-                perplex_to_nb_clusters=perplex_to_nb_clusters,
+                perplex_to_clusters=perplex_nb_clusters,
 
                 movie_writer=movie_writer,
 
                 **params_data,
                 **params["params_plot"],
-                **params["params_anim"],
+                **params["params_anim_to_solver"],
             )
 
             print("Wrapping up..", end='\r')

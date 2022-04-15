@@ -128,6 +128,8 @@ def plot_highlight(
     prior_pop_label="prior population", prior_pop_color="red",
     solvers_label="solvers", solvers_alpha=.5,
 
+    subtitle=True,
+
     to_highlight={},  box_size=12, marker='o',
     title="", save_path=None, save_name=""):
     """
@@ -170,7 +172,7 @@ def plot_highlight(
                 axs[i].scatter(np.array(points)[:, 0], np.array(points)[:, 1],
                     label=algo, color=color, marker=marker)
         
-        axs[i].set_title("Perplexity: {}".format(perplexity))
+        if subtitle is True:    axs[i].set_title("Perplexity: {}".format(perplexity))
     
     if legend is True:
         fig.legend(*axs[0].get_legend_handles_labels())
@@ -188,6 +190,7 @@ def plot_follow(
     background_alpha=.25, inner_alpha=.5,
     base_color="blue", box_size=12, marker='o',
     base_title="{} {} {} {}", save_path=None, save_name="",
+    subtitle=True,
     type_writer=animation.PillowWriter, fps=30, dpi=100, time_pause=1.5):
     """
     Animates the TSNE plots for given meta_steps and inner_steps
@@ -214,7 +217,7 @@ def plot_follow(
             points = np.array(perplex_to_extractor[perplexity].list)
             axs[k][i].scatter(points[:, 0], points[:, 1],
                 label="solvers", color=base_color, marker=marker, alpha=background_alpha)
-            axs[k][i].set_title("Perplexity: {}".format(perplexity))
+            if subtitle is True: axs[k][i].set_title("Perplexity: {}".format(perplexity))
 
     # Extractors all have the same structure, just not the same values
     basic_extractor = list(list_perplex_to_extractor[0].values())[0]
@@ -302,14 +305,14 @@ def distance_euclidian(a, b):
     return np.sqrt(sum([(a[i] - b[i])**2 for i in range(len(a))]))
 
 
-def k_means(points, nb_clusters, min_distance=float('-inf'), distance=distance_euclidian):
+def k_means(points, centers_clusters, min_distance=float('-inf'), distance=distance_euclidian):
     """
     Applies K-means algorithm to a given set of points, returns clusters as lists of point index
     """
 
     clusters = [
-        [points[ipoint], [ipoint]]
-        for ipoint in random.choices(range(len(points)), k=nb_clusters)
+        [c, []]
+        for c in centers_clusters
     ] # [(center, point index)]
 
     point_to_cluster = {
@@ -348,7 +351,7 @@ def k_means(points, nb_clusters, min_distance=float('-inf'), distance=distance_e
     return tuple([c[-1] for c in clusters])
 
 
-def get_nb_clusters(input_array, quantile=.05):
+def get_clusters(input_array, quantile=.005):
     """
     Returns the number of estimated clusters in array
     """
@@ -358,17 +361,18 @@ def get_nb_clusters(input_array, quantile=.05):
     ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
     ms.fit(input_array)
 
-    return len(np.unique(ms.labels_))
+    return ms.cluster_centers_, len(np.unique(ms.labels_))
 
 
 def plot_clustering(
     perplexities, list_perplex_to_extractor,
-    perplex_to_nb_clusters,
+    perplex_to_clusters,
     fig=None, axs=None, movie_writer=None,
     color="red",
-    types_run=None, animate_inner=True,
-    background_alpha=.25, inner_alpha=.5,
+    animate_inner=True,
+    background_alpha=.25,
     base_color="blue", box_size=12, marker='o',
+    subtitle=False,
     save_path=None, save_name="",
     type_writer=animation.PillowWriter, fps=30, dpi=100, time_pause=1.5):
     
@@ -398,13 +402,13 @@ def plot_clustering(
             points = np.array(perplex_to_extractor[perplexity].list)
             axs[k][i].scatter(points[:, 0], points[:, 1],
                 label="solvers", color=base_color, marker=marker, alpha=background_alpha)
-            axs[k][i].set_title("Perplexity: {}".format(perplexity))
+            if subtitle is True:    axs[k][i].set_title("Perplexity: {}".format(perplexity))
     
         # Retrieve the clusters from the parameters space
         perplex_to_clusters = {
             perplexity:k_means(
                 points=list_perplex_to_extractor[0][perplexity].list,
-                nb_clusters=perplex_to_nb_clusters[perplexity],
+                centers_clusters=perplex_to_clusters[perplexity][0],
                 min_distance=0.01
             )
             for perplexity in perplexities

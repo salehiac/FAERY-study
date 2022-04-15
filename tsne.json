@@ -1,38 +1,38 @@
 {
+    "env": "assembly-v2",
     "nb_samples": 5000,
     "perplexities": [75],
-
-    "load_directory": "./data/assembly-v2",
-    "save_path": "data/Images/assembly-v2", 
+    "is_sequential":false,
+    
+    "load_directory": "./data/{}",
+    "save_path": "data/Images/{}", 
     "save_basename":"TSNE_{}",
 
-    "pca_components": 500,
-
+    "param_to_solver":true,
     "param_or_solver":"params",
 
-    "param_to_solver":true,
+    "pca_components": 500,
     "titles_side":["Parameter space {} perplexity and PCA of {} components", "Behavioral space {} perplexity"],
 
     "bland":true,
+
     "highlight":true,
-    "follow":false,
-    "clustering":true,
-
-    "is_sequential":false,
-
     "to_highlight": {
         "NS_-1":"dodgerblue",
         "NS_0":"red",
         "NS_1":"green"
     },
 
-    "meta_steps":{"train": ["0","1","2","3","4"]},
-
+    "follow":true,
     "to_follow": {
         "NS_-1":"dodgerblue",
         "NS_0":"red",
         "NS_1":"green"
     },
+    "meta_steps":{"train": ["0","1"]},
+
+    "clustering":true,
+    "cluster_quantile": 0.05,
 
     "params_plot": {
         "box_size": 8,
@@ -45,6 +45,14 @@
         "inner_alpha":0.25,
         "types_run": ["train"],
         "animate_inner": true,
+        "fps": 14,
+        "dpi": 100,
+        "time_pause": 1.5
+    },
+
+    "params_anim_to_solver": {
+        "background_alpha":1,
+        "animate_inner": false,
         "fps": 14,
         "dpi": 100,
         "time_pause": 1.5
