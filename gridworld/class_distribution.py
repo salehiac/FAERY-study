@@ -47,7 +47,7 @@ class Distribution(ABC):
     @abstractmethod
     def sample(self):
         """
-        Returns a sampled pixel (uniform probability)
+        Returns a sampled pixel
         """
 
         return NotImplemented

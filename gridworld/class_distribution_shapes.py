@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from class_distribution import Distribution, UniformDistribution
+from class_distribution import UniformDistribution
 
 
 class UniformCircular(UniformDistribution):
@@ -24,6 +24,36 @@ class UniformCircular(UniformDistribution):
             radius=self.radius,
             color=self.area_color,
             thickness=-1
+        )
+
+        shape = (world_new - world_tmp).nonzero()[:2]
+        return list(np.concatenate([np.array([c]).T for c in shape], axis=1))
+
+
+class UniformRing(UniformDistribution):
+    """
+    A distribution of ring shape
+    """
+
+    def __init__(self, center, inner_radius, outer_radius):
+        super().__init__()
+
+        self.center = center
+        
+        assert inner_radius < outer_radius, "Radius are inverted"
+
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+
+    def _make_me(self, world):
+
+        world_tmp = world.copy()
+        world_new = cv2.circle(
+            img=world,
+            center=self.center[::-1],
+            radius=self.outer_radius,
+            color=self.area_color,
+            thickness=self.outer_radius - self.inner_radius
         )
 
         shape = (world_new - world_tmp).nonzero()[:2]

@@ -11,3 +11,12 @@ GridWorldSparse40x40Mixed = {
     ],
     "start_distribution":UniformCircular((1,1), 0)
 }
+
+GridWorld40x40Circles = {
+    "size":40,
+    "distributions":[
+        UniformRing((19, 19), radius, radius+1)
+        for radius in range(1,31,4)
+    ],
+    "start_distribution":UniformCircular((19,19), 0)
+}

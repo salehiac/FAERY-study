@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from class_reward_function import RewardBinary
 
-from utils_worlds import GridWorldSparse40x40Mixed
+from utils_worlds import GridWorldSparse40x40Mixed, GridWorld40x40Circles
 
 
 class GridWorld:
@@ -242,5 +242,9 @@ class GridWorld:
         return grid
 
 
-g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)
-g.visualise_as_grid()
+if __name__ == "__main__":
+    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)    
+    g.visualise_as_grid()
+
+    g = GridWorld(**GridWorld40x40Circles, is_guessing_game=True)
+    g.visualise_as_grid()
