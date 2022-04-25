@@ -120,7 +120,7 @@ def get_score(path, name, start, end):
 def save_lone_graph(path, basename, start, end,
                     inner_algo, removed_obj,
                     colors_adapt, colors_scores, colors_solved,
-                    save_basename, title,
+                    save_basename, title, to_path
                     ):
     """
     Saves the graphs for a single algorithm,
@@ -243,7 +243,7 @@ def save_lone_graph(path, basename, start, end,
 
 
         plt.suptitle(title.format(data_name))
-        plt.savefig("data/Images/{}.png".format(save_basename.format(data_name)))
+        plt.savefig("{}/{}.png".format(to_path, save_basename.format(data_name)))
 
         results_obj[-1]["data"] = data
         results_obj[-1]["data score"] = data_score
@@ -256,7 +256,7 @@ def save_compare_graph(start, end,
                        inner_algo, removed_obj,
                        colors_compare,
                        save_basename_compare, title_compare,
-                       results_obj,
+                       results_obj, to_path,
                        ):
     """
     Saves the comparison graph for the ablation
@@ -332,12 +332,12 @@ def save_compare_graph(start, end,
     )
 
     plt.suptitle(title_compare.format(inner_algo))
-    plt.savefig("data/Images/{}.png".format(save_basename_compare.format(inner_algo)))
+    plt.savefig("{}/{}.png".format(to_path, save_basename_compare.format(inner_algo)))
 
     return {}
 
 
-def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval):
+def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval, to_path):
     """
     Saves an animation of the individual's scores
     """
@@ -382,7 +382,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
 
     my_anim = animation.FuncAnimation(fig, animate, frames=end, interval=interval)
     
-    my_anim.save("{}/{}/animated_scores_{}.gif".format("data/Images", inner_algo, inner_algo), writer="pillow")
+    my_anim.save("{}/{}/animated_scores_{}.gif".format(to_path, inner_algo, inner_algo), writer="pillow")
 
 
 def graph_filled(ax,

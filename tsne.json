@@ -1,0 +1,60 @@
+{
+    "env": "assembly-v2",
+    "nb_samples": 5000,
+    "perplexities": [75],
+    "is_sequential":false,
+    
+    "load_directory": "./data/{}",
+    "save_path": "data/Images/{}", 
+    "save_basename":"TSNE_{}",
+
+    "param_to_solver":true,
+    "param_or_solver":"params",
+
+    "pca_components": 500,
+    "titles_side":["Parameter space {} perplexity and PCA of {} components", "Behavioral space {} perplexity"],
+
+    "bland":true,
+
+    "highlight":true,
+    "to_highlight": {
+        "NS_-1":"dodgerblue",
+        "NS_0":"red",
+        "NS_1":"green"
+    },
+
+    "follow":true,
+    "to_follow": {
+        "NS_-1":"dodgerblue",
+        "NS_0":"red",
+        "NS_1":"green"
+    },
+    "meta_steps":{"train": ["0","1"]},
+
+    "clustering":true,
+    "cluster_quantile": 0.05,
+
+    "params_plot": {
+        "box_size": 8,
+        "marker": "o",
+        "base_color": "lightblue"
+    },
+
+    "params_anim": {
+        "background_alpha":1,
+        "inner_alpha":0.25,
+        "types_run": ["train"],
+        "animate_inner": true,
+        "fps": 14,
+        "dpi": 100,
+        "time_pause": 1.5
+    },
+
+    "params_anim_to_solver": {
+        "background_alpha":1,
+        "animate_inner": false,
+        "fps": 14,
+        "dpi": 100,
+        "time_pause": 1.5
+    }
+}

@@ -1,68 +1,80 @@
+import json
+import argparse
+
 from utils_extract import *
 
+def get_path(parser=None, to_parse=True, default="./results.json", verbose=True):
+    """
+    Returns the queried path
+    """
 
-start_end = {
-    "QD":(0,99),
-    "NS":(0,99),
-    "RANDOM":(0,99)
-    }
-removed_obj = [-1, 0, 1]
-path, basename = "data/FAERY/", "FAERY_{}"
+    if parser is None:
+        parser = parser = argparse.ArgumentParser()
 
-solo = True
-compare = True
-animate = True
+    parser.add_argument(
+        "--path_params",
+        type=str,
+        help="path to the json file",
+        default=default
+    )
 
-colors_adapt = ("dodgerblue", "lightblue")
-colors_scores = [("green","yellowgreen"), ("red","darksalmon")]
-colors_solved = ("gray", "dodgerblue")
-colors_new_score = ("dodgerblue", "lightblue")
+    path = parser.parse_args().path_params
+    if path[-5:] != ".json":    path += ".json"
 
-colors_compare = [("dodgerblue", "lightblue"), ("red","darksalmon"), ("green", "yellowgreen")]
+    if verbose is True:
+        print("Loaded parameters from {}".format(path))
 
-title_solo = "Performances de FAERY appliqué à {} sur 100x200 steps\nmoyenne sur 25 tâches"
-title_compare = "Comparison {}"
-
-save_basename_solo = "Results_{}"
-save_basename_compare = "Results_compare_{}"
+    return path if to_parse is True else parser
 
 
-for inner_algo in start_end.keys():
+with open(get_path(default="results_ablation.json"), 'r') as f:
+    params = json.load(f)
+
+
+for inner_algo in params["start_end"].keys():
 
     save_basepath = "{}/".format(inner_algo)
-    start, end = start_end[inner_algo]
+    start, end = params["start_end"][inner_algo]
     
-    if solo is True:
+    if params["solo"] is True:
+        print("Saving lone graph..", end='\r')
         results_obj = save_lone_graph(
-            path=path,
-            basename=basename,
+            path=params["path"],
+            basename=params["basename"],
             start=start, end=end,
             inner_algo=inner_algo,
-            removed_obj=removed_obj,
-            colors_adapt=colors_adapt,
-            colors_scores=colors_scores,
-            colors_solved=colors_solved,
-            save_basename=save_basepath + save_basename_solo,
-            title=title_solo
+            removed_obj=params["removed_obj"],
+            colors_adapt=params["colors_adapt"],
+            colors_scores=params["colors_scores"],
+            colors_solved=params["colors_solved"],
+            save_basename=save_basepath + params["save_basename_solo"],
+            title=params["title_solo"],
+            to_path=params["save_path"],
         )
 
-    if compare is True:
+    if params["compare"] is True:
+        print("Saving compare graph..", end='\r')
         _ = save_compare_graph(
             start=start, end=end,
             inner_algo=inner_algo,
-            removed_obj=removed_obj,
-            colors_compare=colors_compare,
-            save_basename_compare=save_basepath + save_basename_compare,
-            title_compare=title_compare,
+            removed_obj=params["removed_obj"],
+            colors_compare=params["colors_compare"],
+            save_basename_compare=save_basepath + params["save_basename_compare"],
+            title_compare=params["title_compare"],
             results_obj=results_obj,
+            to_path=params["save_path"],
         )
 
-    if animate is True:
+    if params["animate"] is True:
+        print("Saving the scores' animation..", end='\r')
         save_animation(
             inner_algo=inner_algo,
-            colors_compare=colors_compare,
+            colors_compare=params["colors_compare"],
             end=end,
             results_obj=results_obj,
-            removed_obj=removed_obj,
+            removed_obj=params["removed_obj"],
             interval=500,
+            to_path=params["save_path"],
         )
+    print(40 * " ", end='\r')
+    print("Done")

@@ -108,8 +108,8 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
     if not len(solutions.keys()):  # environment wasn't solved
         return [], -1, parents
 
-    assert len(solutions.keys(
-    )) == 1, "solutions should only contain solutions from a single generation"
+    assert len(solutions.keys()) == 1, \
+         "solutions should only contain solutions from a single generation"
     depth = list(solutions.keys())[0]
 
     roots = [sol._root for sol in solutions[depth]]
