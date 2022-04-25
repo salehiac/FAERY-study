@@ -1,4 +1,4 @@
-from t_sne.utils_tsne import get_files, order_str_int
+from utils_tsne import get_files, order_str_int
 
 
 class SolverExtractor:

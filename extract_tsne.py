@@ -1,11 +1,9 @@
 import json
 import matplotlib.animation as animation
 
-from sklearn.decomposition import PCA
-
 from utils_misc import get_path
-from t_sne.utils_tsne import *
-from t_sne.class_solver_extractor import SolverExtractor
+from utils_tsne import *
+from class_solver_extractor import SolverExtractor
 
 
 with open(get_path(default="tsne.json"), 'r') as f:
