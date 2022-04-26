@@ -27,7 +27,7 @@ class UniformCircular(UniformDistribution):
         )
 
         shape = (world_new - world_tmp).nonzero()[:2]
-        return list(np.concatenate([np.array([c]).T for c in shape], axis=1))
+        return list(map(tuple, list(np.concatenate([np.array([c]).T for c in shape], axis=1))))
 
 
 class UniformRing(UniformDistribution):
@@ -57,7 +57,7 @@ class UniformRing(UniformDistribution):
         )
 
         shape = (world_new - world_tmp).nonzero()[:2]
-        return list(np.concatenate([np.array([c]).T for c in shape], axis=1))
+        return list(map(tuple, list(np.concatenate([np.array([c]).T for c in shape], axis=1))))
 
 
 class UniformRectangle(UniformDistribution):

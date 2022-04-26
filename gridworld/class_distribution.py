@@ -24,14 +24,14 @@ class Distribution(ABC):
     
     def _make_me(self, world):
         """
-        Returns potential area as list
+        Returns potential area as list of tuples
         """
 
         raise NotImplementedError("Overwrite method if object doesn't contain sub-distributions")
     
     def _make_shape(self, world):
         """
-        Returns potential area as list from children
+        Returns potential area as list of tuple from children
         """
 
         self.potential_area = []

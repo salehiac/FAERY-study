@@ -16,7 +16,7 @@ class GridWorld:
         "goal":(0, 0, 255),
         "agent_start":(255, 0, 0),
         "agent_current":(255, 0, 0),
-        "trajectory":(255, 0, 0),
+        "trajectory":(255, 180, 0),
     }
 
     sizes = {
@@ -112,9 +112,9 @@ class GridWorld:
         
         elif self.goal_type == "all":
             self.reward_coords = self.potential_goal_areas.copy()
-        
+
         self.init_pos = self.start_distribution.sample()
-        self.state_hist = [tuple(self.init_pos)]
+        self.state_hist = [self.init_pos[:]]
 
         self.current_pos = self.init_pos
         return self.init_pos
@@ -134,28 +134,28 @@ class GridWorld:
         if self.is_guessing_game is False:
 
             if action == 0:
-                self.current_pos = [
+                self.current_pos = tuple([
                     self.current_pos[0],
                     max(0, self.current_pos[1] - 1)
-                ]
+                ])
 
             elif action == 1:
-                self.current_pos = [
+                self.current_pos = tuple([
                     self.current_pos[0],
                     min(self.size - 1, self.current_pos[1] + 1)
-                ]
+                ])
 
             elif action == 2:
-                self.current_pos = [
+                self.current_pos = tuple([
                     max(0, self.current_pos[0] - 1),
                     self.current_pos[1]
-                ]
+                ])
 
             elif action == 3:
-                self.current_pos = [
+                self.current_pos = tuple([
                     min(self.size - 1, self.current_pos[0] + 1),
                     self.current_pos[1]
-                ]
+                ])
             
             done = self.current_pos in self.reward_coords
 
@@ -221,14 +221,15 @@ class GridWorld:
             self._draw_cell_in_grid(grid, *reward, self.colors["goal"])
         
         #   Drawing agent
-        self._draw_cell_in_grid(grid, *self.init_pos, self.colors["agent_start"])
-        self._draw_cell_in_grid(grid, *self.current_pos, self.colors["agent_current"])
-
-        #   Drawing trajectory
+        #       Drawing trajectory
         if visualise_traj is True:
             for cell in self.state_hist:
                 self._draw_cell_in_grid(grid, *cell, self.colors["trajectory"])
         
+        #       Drawing position
+        self._draw_cell_in_grid(grid, *self.init_pos, self.colors["agent_start"])
+        self._draw_cell_in_grid(grid, *self.current_pos, self.colors["agent_current"])
+ 
         # Clipping grid data to fit in 0..1 range
         grid /= 255
 
@@ -243,8 +244,12 @@ class GridWorld:
 
 
 if __name__ == "__main__":
-    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)    
-    g.visualise_as_grid()
+    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)    
 
-    g = GridWorld(**GridWorld40x40Circles, is_guessing_game=True)
+    for k in range(10):
+        _, reward, done = g.step(random.randint(0,3))
+        if done is True:
+            print("DONE")
+            break
+    
     g.visualise_as_grid()
