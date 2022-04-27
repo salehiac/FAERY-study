@@ -17,7 +17,6 @@
 
 import os
 import pickle
-import metaworld
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -25,11 +24,7 @@ from termcolor import colored
 from scoop import futures
 
 import utils_misc
-import problem.class_problem_metaworld as class_problem_metaworld
-import novelty_search.class_archive as class_archive
-import novelty_search.class_novelty_estimators as class_novelty_estimators
 
-from novelty_search.class_novelty_search import NoveltySearch
 from meta_learning.utils_sparse_rewards import _mutate_initial_prior_pop, _mutate_prior_pop, ns_instance
 
 
@@ -295,16 +290,7 @@ class ForSparseRewards(ABC):
 
             tmp_pop = self._get_offspring()
 
-            if isinstance(self.train_sampler,
-                          class_problem_metaworld.SampleSingleExampleFromML10):
-                ml10obj = metaworld.ML10()
-
             if not test_first:
-
-                if isinstance(self.train_sampler,
-                              class_problem_metaworld.SampleSingleExampleFromML10):
-
-                    self.train_sampler.set_ml10obj(ml10obj)
 
                 # [roots, depths, populations]
                 metadata = self._get_metadata(tmp_pop, "train", outer_g)
@@ -330,11 +316,6 @@ class ForSparseRewards(ABC):
             if outer_g % 10 == 0 and not disable_testing:
 
                 test_first = False
-
-                if isinstance(self.test_sampler,
-                              class_problem_metaworld.SampleSingleExampleFromML10):
-                    self.test_sampler.set_ml10obj(ml10obj)
-
                 metadata = self._get_metadata(self.pop, "test", outer_g)
                 
                 self._make_evolution_table(metadata, None, outer_g, "test", save)

@@ -1,10 +1,13 @@
+import torch
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 
+from itertools import product
+
 from class_reward_function import RewardBinary
 
-from utils_worlds import GridWorldSparse40x40Mixed, GridWorld40x40Circles
+from utils_worlds import *
 
 
 class GridWorld:
@@ -34,6 +37,7 @@ class GridWorld:
         goal_type="mix 1",
         reward_function=RewardBinary(),
         is_guessing_game=False,
+        walls=[],
         ):
         """
         is_guessing_game : agent will only guess a single cell
@@ -63,6 +67,23 @@ class GridWorld:
 
         # Intialiazing start distribution
         self.start_distribution._make_shape(np.zeros([self.size, self.size, 3]))
+
+        self.walls = set(walls)
+        for wall in self.walls:
+            for distribution in self.distributions:
+                try:
+                    distribution.potential_area.remove(wall)
+                    distribution.size -= 1
+                    self.potential_goal_areas.remove(wall)
+                except ValueError:
+                    pass
+            
+            try:
+                self.start_distribution.potential_area.remove(wall)
+            except ValueError:
+                pass
+
+        self.empty_cells = set(product(range(self.size), range(self.size))) - self.walls
 
         self.current_pos = None
         self.state_hist = []
@@ -108,12 +129,15 @@ class GridWorld:
                     population=distribution.potential_area,
                     k=self.nb_samples
                 )
-
         
         elif self.goal_type == "all":
             self.reward_coords = self.potential_goal_areas.copy()
 
-        self.init_pos = self.start_distribution.sample()
+        try:
+            self.init_pos = self.start_distribution.sample()
+        except IndexError:
+            raise IndexError("Starting position destroyed by walls (or of area 0)")
+
         self.state_hist = [self.init_pos[:]]
 
         self.current_pos = self.init_pos
@@ -132,6 +156,8 @@ class GridWorld:
         """
 
         if self.is_guessing_game is False:
+            
+            previous_pos = self.current_pos
 
             if action == 0:
                 self.current_pos = tuple([
@@ -157,14 +183,45 @@ class GridWorld:
                     self.current_pos[1]
                 ])
             
+            # Can be faster if no min and max above, juste check on available cells
+            if self.current_pos in self.walls:
+                self.current_pos = previous_pos
+            
             done = self.current_pos in self.reward_coords
 
         else:
+
+            if action not in self.empty_cells:
+                print(action)
+                raise ValueError("Guess taken in a wall")
+
             self.current_pos = action
             done = True
 
         self.state_hist.append(self.current_pos)
         return self.current_pos, self.reward_function(self), done
+
+    def __call__(self, ag, nb_steps):
+        """
+        Runs the environment on a given agent
+        """
+
+        if hasattr(ag, "eval"):  # in case of torch agent
+            ag.eval()
+        
+        with torch.no_grad():
+            fitness = 0
+            obs = self.current_pos
+
+            for _ in range(0, nb_steps):
+                action = ag(obs)
+                obs, reward, done = self.step(action)
+                fitness += reward
+
+                if done is True:
+                    break
+
+        return fitness, done, self.state_hist
 
     def _world_to_grid(self, row, col):
         """
@@ -210,6 +267,9 @@ class GridWorld:
             start = j * (self.sizes["cell"] + self.sizes["wall"])
             grid[:, start:start + self.sizes["wall"]] = (0, 0, 0)
         
+        for wall in self.walls:
+            self._draw_cell_in_grid(grid, *wall, (0, 0, 0))
+        
         # Drawing cells' content
         #   Drawing potential goals
         for distribution in self.distributions:
@@ -244,9 +304,9 @@ class GridWorld:
 
 
 if __name__ == "__main__":
-    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)    
+    g = GridWorld(**GridWorldSparse40x40MixedCut, is_guessing_game=False)    
 
-    for k in range(10):
+    for k in range(1000):
         _, reward, done = g.step(random.randint(0,3))
         if done is True:
             print("DONE")

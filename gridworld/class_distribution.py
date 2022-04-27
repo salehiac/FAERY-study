@@ -7,6 +7,8 @@ class Distribution(ABC):
     """
     A group of shapes, the pixels of which can be randomly sampled as goals for GridWorld.
     Overlap is counted as one.
+
+    /!\ Biased if distribution is out of bounds because it'll be squished against the walls.
     """
 
     id = 0
