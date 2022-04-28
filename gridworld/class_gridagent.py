@@ -46,6 +46,12 @@ class GridAgent(torch.nn.Module):
 
         self.created_at_gen = generation
         self.parent = parent
+
+        # Behavioral descriptor of the agent
+        self.state_hist = None
+        self.behavior = None
+
+        self.weights = self.get_flattened_weights()
     
     def forward(self, x, return_type="tuple"):
         """
@@ -57,9 +63,11 @@ class GridAgent(torch.nn.Module):
         output = self.non_linearity(self.mds[0](output))
         for md in self.mds[1:-1]:
             output = self.batchnorm(self.non_linearity(md(output)))
-        output = self.mds[-1](output)
-        output = self.output_normaliser(output)
 
+        output = self.non_linearity(self.mds[-1](output))
+        
+        output = self.output_normaliser(output)
+        
         if return_type == "tuple":
             return tuple(*output.numpy())
         elif return_type == "numpy":
@@ -98,24 +106,57 @@ class GridAgent(torch.nn.Module):
                     start + num_w + num_b]).reshape(b.shape)
 
                 start = start + num_w + num_b
+        
+        self.weights = self.get_flattened_weights()
+    
+    def update_behavior(self, state_hist):
+        """
+        Updates the agent's behavior descriptor based on its trajectory
+        """
 
-    def update(self):
+        self.state_hist = state_hist
+        self.behavior = self.state_hist[-1]
+        return self.behavior
+
+    def meta_update(self):
+        """
+        Updates the agent if it's selected for next meta-step
+        """
+
         self.age += 1
+    
+    def __len__(self):
+        return len(self.weights)
+    
+    def __getitem__(self, key):
+        return self.weights[key]
+    
+    def __setitem__(self, key, value):
+        new_weights = self.weights[:key] + [value] + self.weights[key+1:]
+        self.set_flattened_weights(new_weights)
 
 
 if __name__ == "__main__":
 
     from class_gridworld import GridWorld
-    from utils_worlds import *
+    from utils_worlds import GridWorldSparse40x40Mixed
+    from class_distribution_shapes import UniformRectangle
+    
+    GridWorldSparse40x40Mixed["start_distribution"] = UniformRectangle((0,0), 40, 40)
+    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)
 
-    g = GridWorld(**GridWorldSparse40x40MixedCut, is_guessing_game=True)
-
-    ag = GridAgent(
-        input_dim=2,
-        output_dim=2,
-        non_linearity=torch.sigmoid,
-        output_normalizer=lambda x: torch.round(10 * (x+1)).int()
+    list_ag = [
+        GridAgent(
+            output_dim=2,
+            output_normalizer=lambda x: torch.round(abs(g.size * x)).int()
+        )
+        for _ in range(5)
+    ]
+    for ag in list_ag:
+        g(ag, 1)
+    
+    g.visualise_as_grid(
+        list_state_hist=[ag.state_hist for ag in list_ag],
+        show_start=False,
+        show=True
     )
-
-    g(ag, 100)
-    g.visualise_as_grid()

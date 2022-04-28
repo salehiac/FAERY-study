@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from deap import tools, creator, base
 
 from class_gridagent import GridAgent
@@ -22,9 +22,10 @@ class InnerAlgorithm(ABC):
 
         weights=(1,),
         ag_type=GridAgent,
+        simulation_length=100,
 
         generator={
-            "function":lambda x: x,
+            "function":lambda x, **kw: x(**kw),
             "parameters":{
                 "input_dim":2, 
                 "output_dim":2,
@@ -116,6 +117,7 @@ class InnerAlgorithm(ABC):
 
         self.weights = weights
         self.ag_type = ag_type
+        self.simulation_length = simulation_length
 
         self.meta_generation = meta_generation
 
@@ -128,12 +130,12 @@ class InnerAlgorithm(ABC):
         self.toolbox.register("individual", generator["function"], creator.Individual, **generator["parameters"])
         self.toolbox.register("mate", breeder["function"], **breeder["parameters"])
         self.toolbox.register("mutate", mutator["function"], **mutator["parameters"])
-        self.toolbox.register("select", selector["function"])
+        self.toolbox.register("select", selector["function"], **selector["parameters"])
         self.toolbox.register("evaluate", self._evaluate)
 
         #   Statistics gather results
         self.statistics = tools.Statistics(**statistics["parameters"])
-        for name, func in statistics["to_register"]:
+        for name, func in statistics["to_register"].items():
             self.statistics.register(name, func)
         
         #   Evolution history
@@ -153,17 +155,18 @@ class InnerAlgorithm(ABC):
         del creator.MyFitness
         del creator.Individual
 
-    @abstractmethod
     def _evaluate(self, ag):
         """
-        Evaluation function, algorithm-specific
+        Runs the environment on a given agent
+        Returns its fitness
         """
         
-        return NotImplemented
+        return self.environment(ag, nb_steps=self.simulation_length)[0]
     
-    def _apply_fitness(self, population):
+    def _run_inner(self, population):
         """
         Evaluates a population of individuals and saves their fitness
+        Typically where a novelty search would be implemented
         """
 
         fitnesses = self.toolbox.map(self.toolbox.evaluate, population)
@@ -174,6 +177,7 @@ class InnerAlgorithm(ABC):
         """
         Saves the statistics in class's objects
         """
+
         self.hall_of_fame.update(population)
         self.logbook.record(
             gen=generation,
@@ -188,8 +192,8 @@ class InnerAlgorithm(ABC):
         # Initialization
         self.population = [self.toolbox.individual() for _ in range(self.population_size)]
 
-        self._apply_fitness(self.population)
-        self._compile_stats(self.population, 0)
+        self._run_inner(self.population)
+        # self._compile_stats(self.population, 0)
 
         # Running the algorithm
         for g in range(self.nb_generations):
@@ -200,30 +204,27 @@ class InnerAlgorithm(ABC):
                 for ind in self.toolbox.select(self.population, self.offspring_size)
             ]
             
-            # Clone the selected offspring
-            tabOffspring = list(map(self.toolbox.clone, offspring))
-            
-            # Apply crossover on the offspring
-            for child1, child2 in zip(tabOffspring[::2], tabOffspring[1::2]):
-                if random.random() < self.cross_over_prob:
-                    self.toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
+            # # Apply crossover on the offspring
+            # tabOffspring = list(map(self.toolbox.clone, offspring))
+            # for child1, child2 in zip(tabOffspring[::2], tabOffspring[1::2]):
+            #     if random.random() < self.cross_over_prob:
+            #         self.toolbox.mate(child1, child2)
+            #         del child1.fitness.values
+            #         del child2.fitness.values
                     
             # Apply mutation on the offspring
             for mutant in offspring:
                 if random.random() < self.mutation_prob:
                     self.toolbox.mutate(mutant)
                     del mutant.fitness.values
-            
+
             # Evaluate the individuals
-            self._apply_fitness(offspring)
+            self._run_inner(offspring)
             
             # Adding the offspring to the population
             self.population += offspring[:]
-            # Removing the worst individuals from the population
-            for badInd in tools.selBest(self.population, len(offspring)):
-                self.population.remove(badInd)
+            # Keeping the best individuals of the population
+            self.population = self.toolbox.select(self.population, self.population_size)
 
             self._compile_stats(self.population, g)
 

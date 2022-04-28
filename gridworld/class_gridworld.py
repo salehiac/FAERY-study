@@ -206,6 +206,8 @@ class GridWorld:
         Runs the environment on a given agent
         """
 
+        self.reset()
+
         if hasattr(ag, "eval"):  # in case of torch agent
             ag.eval()
         
@@ -220,7 +222,8 @@ class GridWorld:
 
                 if done is True:
                     break
-
+        
+        ag.update_behavior(self.state_hist)
         return fitness, done, self.state_hist
 
     def _world_to_grid(self, row, col):
@@ -246,13 +249,22 @@ class GridWorld:
 
     def visualise_as_grid(
         self,
-        visualise_traj=True,
-        show=True,
+
+        list_state_hist=[],
+
+        show_traj=False,
+        show_start=True,
+        show_end=True,
+
+        show=False,
         save_path=None,
         ):
         """
-        Shows and/or saves the grid
+        Shows and/or saves the grid, can be modified with given trajectories
         """
+
+        if len(list_state_hist) == 0:
+            list_state_hist = [self.state_hist]
 
         # Drawing background
         grid_size = self.size * (self.sizes["cell"] + self.sizes["wall"])
@@ -280,15 +292,22 @@ class GridWorld:
         for reward in self.reward_coords:
             self._draw_cell_in_grid(grid, *reward, self.colors["goal"])
         
-        #   Drawing agent
-        #       Drawing trajectory
-        if visualise_traj is True:
-            for cell in self.state_hist:
-                self._draw_cell_in_grid(grid, *cell, self.colors["trajectory"])
+        #   Drawing agents
+        for state_hist in list_state_hist:
+            #       Drawing trajectory
+            if show_traj is True:
+                print(state_hist)
+                for cell in state_hist:
+                    self._draw_cell_in_grid(grid, *cell, self.colors["trajectory"])
         
-        #       Drawing position
-        self._draw_cell_in_grid(grid, *self.init_pos, self.colors["agent_start"])
-        self._draw_cell_in_grid(grid, *self.current_pos, self.colors["agent_current"])
+        #   Two separate loops to avoid erasing
+        for state_hist in list_state_hist:  
+            #       Drawing positions
+            if show_start is True:
+                self._draw_cell_in_grid(grid, *state_hist[0], self.colors["agent_start"])
+
+            if show_end is True:
+                self._draw_cell_in_grid(grid, *state_hist[-1], self.colors["agent_current"])
  
         # Clipping grid data to fit in 0..1 range
         grid /= 255
@@ -304,12 +323,17 @@ class GridWorld:
 
 
 if __name__ == "__main__":
-    g = GridWorld(**GridWorldSparse40x40MixedCut, is_guessing_game=False)    
 
-    for k in range(1000):
-        _, reward, done = g.step(random.randint(0,3))
+    GridWorldSparse40x40Mixed["start_distribution"] = UniformRectangle((0,0), 40, 40)
+    g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)    
+
+    for k in range(100):
+        position, reward, done = g.step(random.randint(0,3))
         if done is True:
             print("DONE")
             break
     
-    g.visualise_as_grid()
+    g.visualise_as_grid(
+        show_traj=True,
+        show=True
+    )
