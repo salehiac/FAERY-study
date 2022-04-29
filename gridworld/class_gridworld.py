@@ -23,8 +23,9 @@ class GridWorld:
     }
 
     sizes = {
-        "cell":13,
-        "wall":2,
+        "cell":12,
+        "wall":1,
+        "highlight":1,
     }
 
     max_sample_failure = 1000
@@ -88,58 +89,60 @@ class GridWorld:
         self.current_pos = None
         self.state_hist = []
 
+        self.reward_coords = []
         self.reset()
 
-    def reset(self):
+    def reset(self, change_goal=True):
         """
         Resets the environment and defines new goals aswell as a new starting position
         """
 
-        self.reward_coords = []
-        if self.goal_type == "uniform":
-            if self.nb_samples >= len(self.potential_goal_areas):
-                raise ValueError("Failed to sample, shapes might be too small")
-                
-            self.reward_coords = random.sample(
-                population=self.potential_goal_areas,
-                k=self.nb_samples
-            )
-
-        elif self.goal_type == "mix":
-            i, failed = 0, 0
-
-            while i < self.nb_samples:
-                new_goal = tuple(random.choice(self.distributions).sample())
-                
-                if new_goal in self.reward_coords:
-                    failed += 1
-                    if failed >= self.max_sample_failure:
-                        raise ValueError("Failed to sample, shapes might be too small")
-                    continue
-                
-                self.reward_coords.append(new_goal)
-                i += 1
-        
-        elif self.goal_type == "unique":
-            for distribution in self.distributions:
-                if self.nb_samples >= len(distribution.potential_area):
+        if change_goal is True:
+            self.reward_coords = []
+            if self.goal_type == "uniform":
+                if self.nb_samples >= len(self.potential_goal_areas):
                     raise ValueError("Failed to sample, shapes might be too small")
-                
-                self.reward_coords += random.sample(
-                    population=distribution.potential_area,
+                    
+                self.reward_coords = random.sample(
+                    population=self.potential_goal_areas,
                     k=self.nb_samples
                 )
-        
-        elif self.goal_type == "all":
-            self.reward_coords = self.potential_goal_areas.copy()
+
+            elif self.goal_type == "mix":
+                i, failed = 0, 0
+
+                while i < self.nb_samples:
+                    new_goal = tuple(random.choice(self.distributions).sample())
+                    
+                    if new_goal in self.reward_coords:
+                        failed += 1
+                        if failed >= self.max_sample_failure:
+                            raise ValueError("Failed to sample, shapes might be too small")
+                        continue
+                    
+                    self.reward_coords.append(new_goal)
+                    i += 1
+            
+            elif self.goal_type == "unique":
+                for distribution in self.distributions:
+                    if self.nb_samples >= len(distribution.potential_area):
+                        raise ValueError("Failed to sample, shapes might be too small")
+                    
+                    self.reward_coords += random.sample(
+                        population=distribution.potential_area,
+                        k=self.nb_samples
+                    )
+            
+            elif self.goal_type == "all":
+                self.reward_coords = self.potential_goal_areas.copy()
 
         try:
             self.init_pos = self.start_distribution.sample()
         except IndexError:
             raise IndexError("Starting position destroyed by walls (or of area 0)")
 
-        self.state_hist = [self.init_pos[:]]
-
+        self.state_hist = [self.init_pos[:]] if self.is_guessing_game is False else []
+        
         self.current_pos = self.init_pos
         return self.init_pos
 
@@ -206,7 +209,7 @@ class GridWorld:
         Runs the environment on a given agent
         """
 
-        self.reset()
+        self.reset(change_goal=False)
 
         if hasattr(ag, "eval"):  # in case of torch agent
             ag.eval()
@@ -242,9 +245,44 @@ class GridWorld:
         """
 
         start = self._world_to_grid(row, col)
+
         grid[
             start[0]:start[0] + self.sizes["cell"],
             start[1]:start[1] + self.sizes["cell"]
+        ] = color
+    
+    def _draw_highlight(self, grid, row, col, color):
+        """
+        Highlights a cell with given color
+        """
+
+        start = self._world_to_grid(row, col)
+
+        cell_size = self.sizes["cell"]
+        margin = self.sizes["highlight"]
+
+        # Left side
+        grid[
+            start[0] - margin:start[0],
+            start[1] - margin:start[1] + cell_size + margin
+        ] = color
+
+        # Right side
+        grid[
+            start[0] + cell_size:start[0] + cell_size + margin,
+            start[1] - margin:start[1] + cell_size + margin
+        ] = color
+
+        # Up side
+        grid[
+            start[0] - margin:start[0] + cell_size + margin,
+            start[1] - margin:start[1]
+        ] = color
+
+        # Down side
+        grid[
+            start[0] - margin:start[0] + cell_size + margin,
+            start[1] + cell_size:start[1] + cell_size + margin
         ] = color
 
     def visualise_as_grid(
@@ -258,6 +296,8 @@ class GridWorld:
 
         show=False,
         save_path=None,
+
+        highlight_goals=True
         ):
         """
         Shows and/or saves the grid, can be modified with given trajectories
@@ -296,7 +336,6 @@ class GridWorld:
         for state_hist in list_state_hist:
             #       Drawing trajectory
             if show_traj is True:
-                print(state_hist)
                 for cell in state_hist:
                     self._draw_cell_in_grid(grid, *cell, self.colors["trajectory"])
         
@@ -308,6 +347,11 @@ class GridWorld:
 
             if show_end is True:
                 self._draw_cell_in_grid(grid, *state_hist[-1], self.colors["agent_current"])
+        
+        # Highlighting the goals if asked, helps if goal is overwritten by agent
+        if highlight_goals is True:
+            for reward in self.reward_coords:
+                self._draw_highlight(grid, *reward, self.colors["goal"])
  
         # Clipping grid data to fit in 0..1 range
         grid /= 255

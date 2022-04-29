@@ -1,13 +1,65 @@
 import torch
+import random
 import numpy as np
 
 
-class GridAgent(torch.nn.Module):
+def add_agent(parent, new_ag):
     """
-    A grid agent, able to take an action
+    Gives an id and a parent to the new agent
+    """
+
+    new_ag.parent = parent
+    new_ag.id = GridAgent.id
+    GridAgent.id += 1
+
+    return new_ag
+
+
+class GridAgent:
+    """
+    A grid agent, able to take an action in GridWorld
     """
 
     id = 0
+
+    def __init__(self, generation=0, parent=None):
+        super().__init__()
+
+        self.id = GridAgent.id
+        GridAgent.id += 1
+
+        # Family tree
+        self.age = 0
+
+        self.created_at_gen = generation
+        self.parent = parent
+
+        # Behavioral descriptor of the agent
+        self.state_hist = []
+        self.behavior = None
+        self.action = None
+    
+    def update_behavior(self, state_hist):
+        """
+        Updates the agent's behavior descriptor based on its trajectory
+        """
+
+        self.state_hist = state_hist
+        self.behavior = self.state_hist[-1]
+        return self.behavior
+    
+    def meta_update(self):
+        """
+        Updates the agent if it's selected for the next meta-step
+        """
+
+        self.age += 1
+    
+
+class GridAgentNN(GridAgent, torch.nn.Module):
+    """
+    A grid agent, able to take an action with a neural network
+    """
 
     def __init__(
         self,
@@ -19,15 +71,14 @@ class GridAgent(torch.nn.Module):
         output_normalizer=lambda x: x,
         
         generation=0, parent=None,
+
         ):
         """
         Enter NN parameters aswell as agent's lineage
         """
 
-        super().__init__()
-
-        self.id = GridAgent.id
-        GridAgent.id += 1
+        GridAgent.__init__(self, generation=generation, parent=parent)
+        torch.nn.Module.__init__(self)
 
         # Agent's network
         self.mds = torch.nn.ModuleList([torch.nn.Linear(input_dim, hidden_dim)])
@@ -41,16 +92,6 @@ class GridAgent(torch.nn.Module):
 
         self.output_normaliser = output_normalizer
 
-        # Family tree
-        self.age = 0
-
-        self.created_at_gen = generation
-        self.parent = parent
-
-        # Behavioral descriptor of the agent
-        self.state_hist = None
-        self.behavior = None
-
         self.weights = self.get_flattened_weights()
     
     def forward(self, x, return_type="tuple"):
@@ -59,21 +100,20 @@ class GridAgent(torch.nn.Module):
         return type : tuple; numpy; torch
         """
 
-        output = torch.Tensor(x).unsqueeze(0)
-        output = self.non_linearity(self.mds[0](output))
+        self.action = torch.Tensor(x).unsqueeze(0)
+        self.action = self.non_linearity(self.mds[0](self.action))
         for md in self.mds[1:-1]:
-            output = self.batchnorm(self.non_linearity(md(output)))
+            self.action = self.batchnorm(self.non_linearity(md(self.action)))
 
-        output = self.non_linearity(self.mds[-1](output))
-        
-        output = self.output_normaliser(output)
+        self.action = self.non_linearity(self.mds[-1](self.action))
+        self.action = self.output_normaliser(self.action)
         
         if return_type == "tuple":
-            return tuple(*output.numpy())
+            return tuple(*self.action.numpy())
         elif return_type == "numpy":
-            return output.detach().cpu().numpy()
+            return self.action.detach().cpu().numpy()
         else:
-            return output
+            return self.action
 
     def get_flattened_weights(self):
         """
@@ -108,23 +148,7 @@ class GridAgent(torch.nn.Module):
                 start = start + num_w + num_b
         
         self.weights = self.get_flattened_weights()
-    
-    def update_behavior(self, state_hist):
-        """
-        Updates the agent's behavior descriptor based on its trajectory
-        """
-
-        self.state_hist = state_hist
-        self.behavior = self.state_hist[-1]
-        return self.behavior
-
-    def meta_update(self):
-        """
-        Updates the agent if it's selected for next meta-step
-        """
-
-        self.age += 1
-    
+        
     def __len__(self):
         return len(self.weights)
     
@@ -134,6 +158,67 @@ class GridAgent(torch.nn.Module):
     def __setitem__(self, key, value):
         new_weights = self.weights[:key] + [value] + self.weights[key+1:]
         self.set_flattened_weights(new_weights)
+
+
+class GridAgentGuesser(GridAgent):
+    """
+    An agent that can take an action in guessing game only
+    with special mutation operator
+    """
+
+    def __init__(self, grid_size, generation=0, parent=None):
+        super().__init__(generation, parent)
+
+        self.grid_size = grid_size
+
+        self.action = tuple([
+            random.randint(0, self.grid_size-1),
+            random.randint(0, self.grid_size-1)
+        ])
+    
+    def __call__(self, *args, **kwds):
+        return self.action
+    
+    def mutate(self):
+        """
+        A mutation is LEFT, RIGHT, UP, DOWN move
+        """
+
+        mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
+        old_act = self.action
+        if mutation == "LEFT":
+            self.action = tuple([
+                self.action[0],
+                max(0, self.action[1] - 1)
+            ])
+
+        elif mutation == "RIGHT":
+            self.action = tuple([
+                self.action[0],
+                min(self.grid_size - 1, self.action[1] + 1)
+            ])
+
+        elif mutation == "UP":
+            self.action = tuple([
+                max(0, self.action[0] - 1),
+                self.action[1]
+            ])
+
+        elif mutation == "DOWN":
+            self.action = tuple([
+                min(self.grid_size - 1, self.action[0] + 1),
+                self.action[1]
+            ])
+        
+    def update_behavior(self, state_hist):
+        """
+        Updates the agent's behavior descriptor based on its trajectory
+        Guesser takes one agent per game, so we're interested in its trajectory over all games
+        """
+
+        self.state_hist += state_hist
+        self.behavior = self.state_hist[-1]
+        return self.behavior
 
 
 if __name__ == "__main__":
@@ -146,7 +231,7 @@ if __name__ == "__main__":
     g = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)
 
     list_ag = [
-        GridAgent(
+        GridAgentNN(
             output_dim=2,
             output_normalizer=lambda x: torch.round(abs(g.size * x)).int()
         )

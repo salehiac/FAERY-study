@@ -1,8 +1,10 @@
+from scipy.spatial import KDTree
+
 from class_inner_algorithm import InnerAlgorithm
 from class_novelty_archive import NoveltyArchive
 
 
-class NoveltySearch(InnerAlgorithm):
+class QualityDiversity(InnerAlgorithm):
     """
     Simple novelty search class
     """
@@ -18,14 +20,18 @@ class NoveltySearch(InnerAlgorithm):
                 "max_size":None
             }
         },
+
+        weights=(1,1),
+
         **kwargs
         ):
 
         super().__init__(
-            *args, **kwargs
+            *args, weights=weights, **kwargs
         )
 
         self.archive = archive["type"](**archive["parameters"])
+        self.env_kd_tree = KDTree(self.environment.reward_coords)
     
     def _run_inner(self, population):
         """
@@ -42,7 +48,10 @@ class NoveltySearch(InnerAlgorithm):
         # Computing the population's novelty
         if self.archive.get_size() >= self.archive.neigh_size:
             for ag in population:
-                ag.fitness.values = self.archive.get_novelty(ag.behavior)
+                ag.fitness.values = (
+                    self.archive.get_novelty(ag.behavior)[0],
+                    self.env_kd_tree.query(ag.behavior, k=1)[0]
+                )
 
 
 if __name__ == "__main__":
@@ -60,12 +69,14 @@ if __name__ == "__main__":
     if compute_NN is True:
         gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)
 
-        ns = NoveltySearch(
+        ns = QualityDiversity(
             environment=gw,
             nb_generations=100,
             population_size=10,
             offspring_size=10,
             meta_generation=0,
+
+            weights=(1, -1),
 
             generator={
                 "function":lambda x, **kw: x(**kw),
@@ -93,14 +104,17 @@ if __name__ == "__main__":
 
     # For guesser agents (those in the article)
     if compute_Guesser is True:
-        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)
+        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True, goal_type="mix 5")
 
-        ns = NoveltySearch(
+        ns = QualityDiversity(
             environment=gw,
             nb_generations=100,
-            population_size=8,
-            offspring_size=8,
+            population_size=20,
+            offspring_size=10,
             meta_generation=0,
+
+            weights=(1, -1),
+            mutation_prob=1,
 
             ag_type=GridAgentGuesser,
 

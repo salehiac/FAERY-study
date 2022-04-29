@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC
 from deap import tools, creator, base
 
-from class_gridagent import GridAgent
+from class_gridagent import add_agent, GridAgentNN
 
 
 class InnerAlgorithm(ABC):
@@ -21,7 +21,7 @@ class InnerAlgorithm(ABC):
         cross_over_prob=.3, mutation_prob=.1,
 
         weights=(1,),
-        ag_type=GridAgent,
+        ag_type=GridAgentNN,
         simulation_length=100,
 
         generator={
@@ -37,12 +37,13 @@ class InnerAlgorithm(ABC):
             }
         },
 
-        breeder={
-            "function":tools.cxSimulatedBinary,
-            "parameters":{
-                "eta":15,
-            }
-        },
+        # breeder={
+        #     "function":tools.cxSimulatedBinary,
+        #     "parameters":{
+        #         "eta":15,
+        #     }
+        # },
+        breeder=None,
 
         mutator={
             "function":tools.mutPolynomialBounded,
@@ -66,11 +67,11 @@ class InnerAlgorithm(ABC):
                 "key":lambda ind: ind.fitness.values
             },
             "to_register":{
-                "avg": np.mean,
-                "std": np.std,
-                "min": np.min,
-                "max": np.max,
-                "fit": lambda x:x[0],
+                "avg": lambda x: np.mean(x, axis=0),
+                "std": lambda x: np.std(x, axis=0),
+                "min": lambda x: np.min(x, axis=0),
+                "max": lambda x: np.max(x, axis=0),
+                # "fit": lambda x: x,
             },
         },
 
@@ -128,7 +129,10 @@ class InnerAlgorithm(ABC):
         self.toolbox = base.Toolbox()
 
         self.toolbox.register("individual", generator["function"], creator.Individual, **generator["parameters"])
-        self.toolbox.register("mate", breeder["function"], **breeder["parameters"])
+        if breeder is not None:
+            self.breeder = True
+            self.toolbox.register("mate", breeder["function"], **breeder["parameters"])
+        else:   self.breeder = None
         self.toolbox.register("mutate", mutator["function"], **mutator["parameters"])
         self.toolbox.register("select", selector["function"], **selector["parameters"])
         self.toolbox.register("evaluate", self._evaluate)
@@ -184,49 +188,63 @@ class InnerAlgorithm(ABC):
             **self.statistics.compile(population)
         )
 
-    def __call__(self):
+    def __call__(self, verbose=True):
         """
         Runs the algorithm
         """
 
         # Initialization
-        self.population = [self.toolbox.individual() for _ in range(self.population_size)]
+        if verbose is True:
+            print("Initializing population..", end="\r")
+
+        self.population = [
+            self.toolbox.individual()
+            for _ in range(self.population_size)
+        ]
 
         self._run_inner(self.population)
         # self._compile_stats(self.population, 0)
 
         # Running the algorithm
         for g in range(self.nb_generations):
+            if verbose is True:
+                print("Running algorithm {}/{}..".format(g+1, self.nb_generations), end="\r")
 
             # Select the next generation
             offspring = [
-                self.toolbox.clone(ind)
+                add_agent(ind, self.toolbox.clone(ind))
                 for ind in self.toolbox.select(self.population, self.offspring_size)
             ]
             
-            # # Apply crossover on the offspring
-            # tabOffspring = list(map(self.toolbox.clone, offspring))
-            # for child1, child2 in zip(tabOffspring[::2], tabOffspring[1::2]):
-            #     if random.random() < self.cross_over_prob:
-            #         self.toolbox.mate(child1, child2)
-            #         del child1.fitness.values
-            #         del child2.fitness.values
+            # Apply crossover on the offspring
+            if self.breeder is not None:
+                tabOffspring = list(map(self.toolbox.clone, offspring))
+                for child1, child2 in zip(tabOffspring[::2], tabOffspring[1::2]):
+                    if random.random() < self.cross_over_prob:
+                        self.toolbox.mate(child1, child2)
+                        del child1.fitness.values
+                        del child2.fitness.values
                     
             # Apply mutation on the offspring
             for mutant in offspring:
                 if random.random() < self.mutation_prob:
                     self.toolbox.mutate(mutant)
+
                     del mutant.fitness.values
 
             # Evaluate the individuals
             self._run_inner(offspring)
-            
+
             # Adding the offspring to the population
             self.population += offspring[:]
+
             # Keeping the best individuals of the population
             self.population = self.toolbox.select(self.population, self.population_size)
 
             self._compile_stats(self.population, g)
 
-        return self.population, self.hall_of_fame, self.logbook
+        if verbose is True:
+            print()
+
+        return self.population, self.logbook, self.hall_of_fame
 
