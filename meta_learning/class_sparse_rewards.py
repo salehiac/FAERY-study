@@ -157,41 +157,7 @@ class ForSparseRewards(ABC):
             sampler = self.test_sampler
             nb_samples = self.num_test_samples
 
-        metadata = list(
-            futures.map(
-                ns_instance,
-                [
-                    sampler
-                    for i in range(nb_samples)
-                ],  # sampler
-                [
-                    [x for x in pop]
-                    for i in range(nb_samples)
-                ],  # population
-                [
-                    self.mutator
-                    for i in range(nb_samples)
-                ],  # mutator
-                [
-                    self.inner_selector
-                    for i in range(nb_samples)
-                ],  # inner_selector
-                [
-                    self.agent_factory
-                    for i in range(nb_samples)
-                ],  # make_ag
-                [
-                    self.G_inner
-                    for i in range(nb_samples)
-                ],
-                [
-                    self.top_level_log
-                    for i in range(nb_samples)
-                ],
-                [
-                    (type_run, outer_g)
-                    for i in range(nb_samples)
-                ]))  # G_inner
+        metadata =
 
         # metadata = ns_instance(
         #     sampler,  # sampler

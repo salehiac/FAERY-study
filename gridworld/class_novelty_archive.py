@@ -8,33 +8,39 @@ class NoveltyArchive:
 
     def __init__(
         self,
-        init_behaviors=[],
+        init_agents=[],
         neighbouring_size=15,
         max_size=None,
         distance_function = dist
         ):
         """
-        init_behaviors : behaviors inside the archive at initialization
+        init_agents : behaviors inside the archive at initialization
         neighbouring_size : k-th nearest neighbours to compute the novelty with
         max_size : maximum size of the archive
         distance_function : the distance function to use between two points
         """
 
-        self.behaviors = init_behaviors[:]
-        self.kdTree = None
-        self.neigh_size = neighbouring_size
-        self.max_size = max_size
+        self.all_agents = init_agents[:]
+        self.behaviors = [ag.behavior for ag in init_agents]
 
+        self.kdTree = None
         self.dist = distance_function
+        self.neigh_size = neighbouring_size
+
+        self.max_size = max_size        
     
-    def update(self, new_behavior):
+    def update(self, agent):
         """
         Update the archive with a new behavior
         """
+        
+        self.all_agents += [agent]
+        self.behaviors += [agent.behavior]
 
-        self.behaviors += [new_behavior]
         if self.max_size is not None:
+            self.all_agents = self.all_agents[-self.max_size:]
             self.behaviors = self.behaviors[-self.max_size:]
+            
         self.kdTree = KDTree(self.behaviors)
     
     def get_novelty(self, behavior):

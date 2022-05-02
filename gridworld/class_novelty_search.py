@@ -11,6 +11,7 @@ class NoveltySearch(InnerAlgorithm):
         self,
         
         *args,
+
         archive = {
             "type":NoveltyArchive,
             "parameters":{
@@ -18,6 +19,7 @@ class NoveltySearch(InnerAlgorithm):
                 "max_size":None
             }
         },
+
         **kwargs
         ):
 
@@ -27,22 +29,38 @@ class NoveltySearch(InnerAlgorithm):
 
         self.archive = archive["type"](**archive["parameters"])
     
-    def _run_inner(self, population):
+    def _update_fitness(self, population):
         """
         Evaluates a population of individuals and saves their novelty as fitness
         """
 
-        fitnesses = self.toolbox.map(self.toolbox.evaluate, population)
+        # Weird call because of scoop
+        fitnesses = self.toolbox.map(
+            InnerAlgorithm._evaluate,
+            [self for _ in range(len(population))],
+            population
+        )
 
         # Updating the archive
         for ag in population:
             next(fitnesses)
-            self.archive.update(ag.behavior)
+            self.archive.update(ag)
         
         # Computing the population's novelty
         if self.archive.get_size() >= self.archive.neigh_size:
             for ag in population:
                 ag.fitness.values = self.archive.get_novelty(ag.behavior)
+    
+    def _compile_stats(self, population, logbook_kwargs={}):
+        """
+        Compile the stats on the whole archive
+        """
+
+        self.hall_of_fame.update(self.archive.all_agents)
+        self.logbook.record(
+            **logbook_kwargs,
+            **self.statistics.compile(self.archive.all_agents)
+        )
 
 
 if __name__ == "__main__":
@@ -97,9 +115,9 @@ if __name__ == "__main__":
 
         ns = NoveltySearch(
             environment=gw,
-            nb_generations=100,
-            population_size=8,
-            offspring_size=8,
+            nb_generations=20,
+            population_size=10,
+            offspring_size=10,
             meta_generation=0,
 
             ag_type=GridAgentGuesser,
@@ -115,14 +133,23 @@ if __name__ == "__main__":
                 "function": lambda x, **kw: x.mutate(),
                 "parameters":{
                 }
-            }
+            },
+
+            archive = {
+                "type":NoveltyArchive,
+                "parameters":{
+                    "neighbouring_size":4,
+                    "max_size":None,
+                }
+            },
         )
 
         pop, log, hof = ns()
         print(log)
 
+        # Novelty over the all archive
         gw.visualise_as_grid(
-            list_state_hist=[ag.state_hist for ag in pop],
+            list_state_hist=[[behavior] for behavior in ns.archive.behaviors],
             show_traj=True,
             show_start=False,
             show_end=True,

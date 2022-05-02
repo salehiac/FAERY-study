@@ -3,12 +3,11 @@ import random
 import numpy as np
 
 
-def add_agent(parent, new_ag):
+def add_agent(new_ag):
     """
-    Gives an id and a parent to the new agent
+    Gives an id to the new agent
     """
 
-    new_ag.parent = parent
     new_ag.id = GridAgent.id
     GridAgent.id += 1
 
@@ -22,7 +21,7 @@ class GridAgent:
 
     id = 0
 
-    def __init__(self, generation=0, parent=None):
+    def __init__(self, generation=0):
         super().__init__()
 
         self.id = GridAgent.id
@@ -32,7 +31,6 @@ class GridAgent:
         self.age = 0
 
         self.created_at_gen = generation
-        self.parent = parent
 
         # Behavioral descriptor of the agent
         self.state_hist = []
@@ -70,14 +68,14 @@ class GridAgentNN(GridAgent, torch.nn.Module):
         non_linearity=torch.tanh, 
         output_normalizer=lambda x: x,
         
-        generation=0, parent=None,
+        generation=0,
 
         ):
         """
         Enter NN parameters aswell as agent's lineage
         """
 
-        GridAgent.__init__(self, generation=generation, parent=parent)
+        GridAgent.__init__(self, generation=generation)
         torch.nn.Module.__init__(self)
 
         # Agent's network
@@ -166,8 +164,8 @@ class GridAgentGuesser(GridAgent):
     with special mutation operator
     """
 
-    def __init__(self, grid_size, generation=0, parent=None):
-        super().__init__(generation, parent)
+    def __init__(self, grid_size, generation=0):
+        super().__init__(generation)
 
         self.grid_size = grid_size
 
