@@ -1,74 +1,17 @@
-from class_inner_algorithm import InnerAlgorithm
-from class_novelty_archive import NoveltyArchive
+from class_quality_diversity import QualityDiversity
 
 
-class NoveltySearch(InnerAlgorithm):
+class NoveltySearch(QualityDiversity):
     """
     Simple novelty search class
     """
 
-    def __init__(
-        self,
-        
-        *args,
-
-        archive = {
-            "type":NoveltyArchive,
-            "parameters":{
-                "neighbouring_size":15,
-                "max_size":None
-            }
-        },
-
-        **kwargs
-        ):
-
-        super().__init__(
-            *args, **kwargs
-        )
-
-        self.archive = archive["type"](**archive["parameters"])
-    
-    def _update_fitness(self, population):
-        """
-        Evaluates a population of individuals and saves their novelty as fitness
-        """
-
-        # Weird call because of scoop
-        fitnesses = self.toolbox.map(
-            InnerAlgorithm._evaluate,
-            [self for _ in range(len(population))],
-            population
-        )
-
-        # Updating the archive
-        for ag in population:
-            next(fitnesses)
-            self.archive.update(ag)
-        
-        # Computing the population's novelty
-        if self.archive.get_size() >= self.archive.neigh_size:
-            for ag in population:
-                ag.fitness.values = self.archive.get_novelty(ag.behavior)
-    
-    def _compile_stats(self, population, logbook_kwargs={}):
-        """
-        Compile the stats on the whole archive
-        """
-
-        self.hall_of_fame.update(self.archive.all_agents)
-        self.logbook.record(
-            **logbook_kwargs,
-            **self.statistics.compile(self.archive.all_agents)
-        )
+    def __init__(self, *args, selection_weights=(1, 0), **kwargs):
+        super().__init__(*args, selection_weights=selection_weights, **kwargs)
 
 
 if __name__ == "__main__":
 
-    import torch
-
-    from class_gridworld import GridWorld
-    from utils_worlds import GridWorldSparse40x40Mixed
     from class_gridagent import GridAgentNN, GridAgentGuesser
 
     compute_NN = False
@@ -76,14 +19,21 @@ if __name__ == "__main__":
 
     # For NN agents
     if compute_NN is True:
-        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)
+
+        import torch
+        from deap import tools
 
         ns = NoveltySearch(
-            environment=gw,
-            nb_generations=100,
+            nb_generations=20,
             population_size=10,
             offspring_size=10,
-            meta_generation=0,
+
+            ag_type=GridAgentNN,
+
+            creator_parameters={
+                "individual_name":"NNIndividual",
+                "fitness_name":"NNFitness",
+             },
 
             generator={
                 "function":lambda x, **kw: x(**kw),
@@ -94,64 +44,41 @@ if __name__ == "__main__":
                     "hidden_dim":10,
                     "use_batchnorm":False,
                     "non_linearity":torch.tanh, 
-                    "output_normalizer":lambda x: torch.round((gw.size - 1) * abs(x)).int(),
+                    "output_normalizer":lambda x: torch.round((40 - 1) * abs(x)).int(),
                     # Something is wrong in normalization
-                }
-            },
-        )
-
-        pop, log, hof = ns()
-
-        gw.visualise_as_grid(
-            list_state_hist=[ag.state_hist for ag in pop],
-            show_start=False,
-            show_end=True,
-            show=True
-        )
-
-    # For guesser agents (those in the article)
-    if compute_Guesser is True:
-        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True)
-
-        ns = NoveltySearch(
-            environment=gw,
-            nb_generations=20,
-            population_size=10,
-            offspring_size=10,
-            meta_generation=0,
-
-            ag_type=GridAgentGuesser,
-
-            generator={
-                "function":lambda x, **kw: x(**kw),
-                "parameters":{
-                    "grid_size":gw.size
                 }
             },
 
             mutator={
-                "function": lambda x, **kw: x.mutate(),
+                "function":tools.mutPolynomialBounded,
                 "parameters":{
-                }
-            },
-
-            archive = {
-                "type":NoveltyArchive,
-                "parameters":{
-                    "neighbouring_size":4,
-                    "max_size":None,
+                    "eta":15,
+                    "low":-1,
+                    "up":1,
+                    "indpb":.3,
                 }
             },
         )
 
-        pop, log, hof = ns()
-        print(log)
+    # For guesser agents (those in the article)
+    if compute_Guesser is True:
 
-        # Novelty over the all archive
-        gw.visualise_as_grid(
-            list_state_hist=[[behavior] for behavior in ns.archive.behaviors],
-            show_traj=True,
-            show_start=False,
-            show_end=True,
-            show=True
+        ns = NoveltySearch(
+            nb_generations=20,
+            population_size=10,
+            offspring_size=10,
+
+            ag_type=GridAgentGuesser,
         )
+
+    pop, log, hof = ns()
+    print(log)
+
+    # Novelty over the all archive
+    ns.environment.visualise_as_grid(
+        list_state_hist=[[behavior] for behavior in ns.archive.behaviors],
+        show_traj=True,
+        show_start=False,
+        show_end=True,
+        show=True
+    )

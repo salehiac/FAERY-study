@@ -1,10 +1,10 @@
 from scipy.spatial import KDTree
 
-from class_inner_algorithm import InnerAlgorithm
+from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
 from class_novelty_archive import NoveltyArchive
 
 
-class QualityDiversity(InnerAlgorithm):
+class QualityDiversity(ToolboxAlgorithmGridWorld):
     """
     Simple novelty search class
     """
@@ -24,8 +24,15 @@ class QualityDiversity(InnerAlgorithm):
 
         selection_weights=(1,1),
 
+        should_compile_stats_archive=True,
+
         **kwargs
         ):
+        """
+        archive : type and parameters of implemented archive
+        should_compile_stats_archive : boolean checking if statistics should be compiled on 
+                                       the whole archive, or just the current population
+        """
 
         super().__init__(
             *args,
@@ -35,19 +42,21 @@ class QualityDiversity(InnerAlgorithm):
 
         self.archive = archive["type"](**archive["parameters"])
         self.env_kd_tree = KDTree(self.environment.reward_coords)
+
+        self.should_compile_stats_archive = should_compile_stats_archive
     
     def _update_fitness(self, population):
         """
-        Evaluates a population of individuals and saves their novelty as fitness
+        Evaluates a population of individuals and saves their novelty and quality as fitness
         """
 
         fitnesses = self.toolbox.map(self._evaluate, population)
-
+        
         # Updating the archive
         for ag in population:
             next(fitnesses)
             self.archive.update(ag)
-        
+
         # Computing the population's novelty
         if self.archive.get_size() >= self.archive.neigh_size:
             for ag in population:
@@ -55,24 +64,37 @@ class QualityDiversity(InnerAlgorithm):
                     self.archive.get_novelty(ag.behavior)[0],
                     self.env_kd_tree.query(ag.behavior, k=1)[0]
                 )
+            return True
+        return False
 
     def _compile_stats(self, population, logbook_kwargs={}):
         """
         Compile the stats on the whole archive
         """
 
-        self.hall_of_fame.update(self.archive.all_agents)
-        self.logbook.record(
-            **logbook_kwargs,
-            **self.statistics.compile(self.archive.all_agents)
-        )
+        if self.should_compile_stats_archive is True:
+            self.hall_of_fame.update(self.archive.all_agents)
+            self.logbook.record(
+                **logbook_kwargs,
+                **self.statistics.compile(self.archive.all_agents)
+            )
+        else:
+            super()._compile_stats(
+                population=population,
+                logbook_kwargs=logbook_kwargs
+            )
+    
+    def reset(self):
+        """
+        Resets the algorithm and the archive
+        """
+
+        super().reset()
+        self.archive.reset()
+        
 
 if __name__ == "__main__":
 
-    import torch
-
-    from class_gridworld import GridWorld
-    from utils_worlds import GridWorldSparse40x40Mixed
     from class_gridagent import GridAgentNN, GridAgentGuesser
 
     compute_NN = False
@@ -80,16 +102,21 @@ if __name__ == "__main__":
 
     # For NN agents
     if compute_NN is True:
-        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=False)
+
+        import torch
+        from deap import tools
 
         ns = QualityDiversity(
-            environment=gw,
-            nb_generations=100,
+            nb_generations=20,
             population_size=10,
             offspring_size=10,
-            meta_generation=0,
 
-            weights=(1, -1),
+            ag_type=GridAgentNN,
+
+            creator_parameters={
+                "individual_name":"NNIndividual",
+                "fitness_name":"NNFitness",
+             },
 
             generator={
                 "function":lambda x, **kw: x(**kw),
@@ -100,57 +127,40 @@ if __name__ == "__main__":
                     "hidden_dim":10,
                     "use_batchnorm":False,
                     "non_linearity":torch.tanh, 
-                    "output_normalizer":lambda x: torch.round((gw.size - 1) * abs(x)).int(),
+                    "output_normalizer":lambda x: torch.round((40 - 1) * abs(x)).int(),
                     # Something is wrong in normalization
-                }
-            },
-        )
-
-        pop, log, hof = ns()
-
-        gw.visualise_as_grid(
-            list_state_hist=[ag.state_hist for ag in pop],
-            show_start=False,
-            show_end=True,
-            show=True
-        )
-
-    # For guesser agents (those in the article)
-    if compute_Guesser is True:
-        gw = GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True, goal_type="mix 1")
-
-        ns = QualityDiversity(
-            environment=gw,
-            nb_generations=20,
-            population_size=10,
-            offspring_size=10,
-            meta_generation=0,
-
-            selection_weights=(1, -1),
-
-            ag_type=GridAgentGuesser,
-
-            generator={
-                "function":lambda x, **kw: x(**kw),
-                "parameters":{
-                    "grid_size":gw.size
                 }
             },
 
             mutator={
-                "function": lambda x, **kw: x.mutate(),
+                "function":tools.mutPolynomialBounded,
                 "parameters":{
+                    "eta":15,
+                    "low":-1,
+                    "up":1,
+                    "indpb":.3,
                 }
-            }
+            },
         )
 
-        pop, log, hof = ns()
-        print(log)
+    # For guesser agents (those in the article)
+    if compute_Guesser is True:
+      
+        ns = QualityDiversity(
+            nb_generations=20,
+            population_size=10,
+            offspring_size=10,
 
-        gw.visualise_as_grid(
-            list_state_hist=[[behavior] for behavior in ns.archive.behaviors],
-            show_traj=True,
-            show_start=False,
-            show_end=True,
-            show=True
+            ag_type=GridAgentGuesser,
         )
+
+    pop, log, hof = ns()
+    print(log)
+
+    ns.environment.visualise_as_grid(
+        list_state_hist=[[behavior] for behavior in ns.archive.behaviors],
+        show_traj=True,
+        show_start=False,
+        show_end=True,
+        show=True
+    )

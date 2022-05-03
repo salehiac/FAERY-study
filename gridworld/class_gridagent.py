@@ -3,17 +3,7 @@ import random
 import numpy as np
 
 
-def add_agent(new_ag):
-    """
-    Gives an id to the new agent
-    """
-
-    new_ag.id = GridAgent.id
-    GridAgent.id += 1
-
-    return new_ag
-
-
+# make it faster __[somethingIforgot]__
 class GridAgent:
     """
     A grid agent, able to take an action in GridWorld
@@ -21,17 +11,12 @@ class GridAgent:
 
     id = 0
 
-    def __init__(self, generation=0):
+    def __init__(self):
         super().__init__()
 
         self.id = GridAgent.id
         GridAgent.id += 1
-
-        # Family tree
-        self.age = 0
-
-        self.created_at_gen = generation
-
+        
         # Behavioral descriptor of the agent
         self.state_hist = []
         self.behavior = None
@@ -45,13 +30,6 @@ class GridAgent:
         self.state_hist = state_hist
         self.behavior = self.state_hist[-1]
         return self.behavior
-    
-    def meta_update(self):
-        """
-        Updates the agent if it's selected for the next meta-step
-        """
-
-        self.age += 1
     
 
 class GridAgentNN(GridAgent, torch.nn.Module):
@@ -67,15 +45,12 @@ class GridAgentNN(GridAgent, torch.nn.Module):
         use_batchnorm=False,
         non_linearity=torch.tanh, 
         output_normalizer=lambda x: x,
-        
-        generation=0,
-
-        ):
+    ):
         """
         Enter NN parameters aswell as agent's lineage
         """
 
-        GridAgent.__init__(self, generation=generation)
+        GridAgent.__init__(self)
         torch.nn.Module.__init__(self)
 
         # Agent's network
@@ -164,8 +139,8 @@ class GridAgentGuesser(GridAgent):
     with special mutation operator
     """
 
-    def __init__(self, grid_size, generation=0):
-        super().__init__(generation)
+    def __init__(self, grid_size):
+        super().__init__()
 
         self.grid_size = grid_size
 
@@ -183,7 +158,6 @@ class GridAgentGuesser(GridAgent):
         """
 
         mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
-        old_act = self.action
         if mutation == "LEFT":
             self.action = tuple([
                 self.action[0],

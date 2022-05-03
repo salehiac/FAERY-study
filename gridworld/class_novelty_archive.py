@@ -56,3 +56,13 @@ class NoveltyArchive:
         """
 
         return len(self.behaviors)
+    
+    def reset(self, init_agents=[]):
+        """
+        Resets the archive
+        """
+
+        self.all_agents = init_agents[:]
+        self.behaviors = [ag.behavior for ag in init_agents]
+
+        self.kdTree = None

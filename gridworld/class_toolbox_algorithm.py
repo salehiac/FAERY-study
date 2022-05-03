@@ -1,16 +1,50 @@
+from venv import create
 import torch
 import random
 import numpy as np
 
 from scoop import futures
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from deap import tools, creator, base
 
-from class_gridagent import add_agent, GridAgentNN
+from class_gridworld import GridWorld, GridWorldSparse40x40Mixed
+from class_gridagent import GridAgentGuesser
 
 
-class ToolboxAlgorithm(ABC):
+class ToolboxAlgorithmFix(type):
+    """
+    Metaclass to fix deap's issue with weights values
+    """
+
+    def correct_fitness(cls, func):
+        """
+        Fixing deap's issue, the package multiplies by the weights then
+        divides the wvalues again, prohibiting usage of infinite and zero weights
+        (which are useful in inheritance or ablation studies, ex: NoveltySearch from QualityDiversity)
+        """
+
+        def wrapper(self, population, *args, **kwargs):
+
+            if func(self, population, *args, **kwargs) is True:
+                for ag in population:
+                    ag.fitness.values = tuple(
+                        ag.fitness.values[i] * self.selection_weights[i]
+                        for i in range(len(self.selection_weights))
+                    )
+        
+        return wrapper
+
+    def __new__(cls, name, bases, attr):
+
+        try:
+            attr["_update_fitness"] = ToolboxAlgorithmFix.correct_fitness(cls, attr["_update_fitness"])
+        except KeyError:
+            pass
+        return super(ToolboxAlgorithmFix, cls).__new__(cls, name, bases, attr)
+
+
+class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
     """
     Base class for deap-based algorithms
     """
@@ -18,7 +52,7 @@ class ToolboxAlgorithm(ABC):
     def __init__(
         self,
 
-        ag_type,
+        ag_type, environment,
         nb_generations,
         population_size, offspring_size,
 
@@ -27,7 +61,6 @@ class ToolboxAlgorithm(ABC):
         creator_parameters={
             "individual_name":"Individual",
             "fitness_name":"MyFitness",
-            "should_delete":True,
         },
 
         selection_weights=(1,),
@@ -84,7 +117,8 @@ class ToolboxAlgorithm(ABC):
             },
         },
 
-        logbook=tools.Logbook(),
+        logbook_parameters={
+        },
 
         hall_of_fame_parameters={
             "maxsize":1,
@@ -96,10 +130,12 @@ class ToolboxAlgorithm(ABC):
         """
 
         creator_parameters : parameters for deap's creator class
+                             (name should be role-specific)
 
-        ag_type : type of the created agents
+        ag_type, environment : type of the created agents, environment to run them on
         selection_weights : weights to use for the fitness function (1,) for maximization
                                                                     (-1,) for minimization
+
         cross_over_prob, mutation_prob : cross-over and mutation probability at each step
         
         generator, breeder, mutator, selector : functions to use for corresponding deap 
@@ -107,14 +143,14 @@ class ToolboxAlgorithm(ABC):
         
         statistics : statistics deap will follow during the algorithm
 
-        logbook : evolution records as chronological list of dictionnaries (optional) user
-            can provide a new chapter as argument
+        logbook_parameters : evolution records as chronological list of dictionnaries (optional)
         
         hall_of_fame_parameters : parameters to use for the hall-of-fame
 
         multiprocessing : if True uses scoop, else uses deap's default map
         """
 
+        self.environment = environment
         self.cross_over_prob = cross_over_prob
         self.mutation_prob = mutation_prob
         self.nb_generations = nb_generations
@@ -124,16 +160,22 @@ class ToolboxAlgorithm(ABC):
 
         # Initialiazing deap's toolbox
         self.creator_parameters = creator_parameters
-        creator.create(
-            self.creator_parameters["fitness_name"],
-            base.Fitness,
-            weights=selection_weights
-        )
-        creator.create(
-            self.creator_parameters["individual_name"],
-            ag_type,
-            fitness=creator.__dict__[self.creator_parameters["fitness_name"]]
-        )
+
+        # Careful not to have the same names for creator attributes if they don't have the same roles
+        if self.creator_parameters["fitness_name"] not in creator.__dict__:
+            creator.create(
+                self.creator_parameters["fitness_name"],
+                base.Fitness,
+                weights=len(selection_weights) * (1,)
+            ) # ISSUE WITH DEAP, CAN'T USE WEIGHTS AT 0, WE APPLY THEM MANUALLY INSTEAD
+            self.selection_weights = selection_weights 
+
+        if self.creator_parameters["individual_name"] not in creator.__dict__:
+            creator.create(
+                self.creator_parameters["individual_name"],
+                ag_type,
+                fitness=creator.__dict__[self.creator_parameters["fitness_name"]]
+            )
 
         self.toolbox = base.Toolbox()
 
@@ -164,16 +206,18 @@ class ToolboxAlgorithm(ABC):
 
         self.toolbox.register("select", selector["function"], **selector["parameters"])
 
-        #   Statistics gather results
+        # Statistics gather results
         self.statistics = tools.Statistics(**statistics["parameters"])
         for name, func in statistics["to_register"].items():
             self.statistics.register(name, func)
         
         #   Evolution history
-        self.logbook = logbook
+        self.logbook_parameters = logbook_parameters
+        self.logbook = tools.Logbook(**self.logbook_parameters)
 
         #   Remembering the best individual(s)
-        self.hall_of_fame = tools.HallOfFame(**hall_of_fame_parameters)
+        self.hall_of_fame_parameters = hall_of_fame_parameters
+        self.hall_of_fame = tools.HallOfFame(**self.hall_of_fame_parameters)
 
         # Setting up multiprocessing
         if multiprocessing is True:
@@ -188,36 +232,48 @@ class ToolboxAlgorithm(ABC):
         Garbage collection
         """
 
-        # Not pretty
-        if self.creator_parameters["should_delete"] is True:
+        # Not pretty..?
+        try:
             del creator.__dict__[self.creator_parameters["fitness_name"]]
+        except KeyError:
+            pass
+
+        try:
             del creator.__dict__[self.creator_parameters["individual_name"]]
+        except KeyError:
+            pass
     
-    @abstractmethod
     def _make_offspring(self):
         """
-        Makes an offspring (should be made from copies of individuals)
+        Makes an offspring (random, can be overriden)
         """
 
-        return NotImplemented
+        return [
+            self.toolbox.individual()
+            for _ in range(self.offspring_size)
+        ]
 
-    @abstractmethod
     def _evaluate(self, ag):
         """
-        Runs the environment, the meta-learning, etc...
+        Runs the environment on a given agent
+        Returns its fitness
         """
 
-        return NotImplemented
+        return self.environment(ag, nb_steps=self.nb_generations)[0]
     
-    def _update_fitness(self, population):
+    def _update_fitness(self, population) -> bool:
         """
         Evaluates a population of individuals and saves their fitness
         Typically where a novelty search would be implemented
+
+        MUST RETURN TRUE IF FITNESS VALUES WERE MODIFIED
         """
 
         fitnesses = self.toolbox.map(self._evaluate, population)
         for ind, fit in zip(population, fitnesses):
             ind.fitness.values = fit
+        
+        return True
     
     def _compile_stats(self, population, logbook_kwargs={}):
         """
@@ -230,6 +286,24 @@ class ToolboxAlgorithm(ABC):
             **self.statistics.compile(population)
         )
     
+    def _mate(self, i, child1, child2):
+        """
+        Mates two agents at index i
+        """
+
+        self.toolbox.mate(child1, child2)
+
+        self.population[2*i] = child1
+        self.population[2*i+1] = child2
+    
+    def _mutate(self, i, mutant):
+        """
+        Mutates the mutant at index i
+        """
+
+        self.toolbox.mutate(mutant)
+        self.population[i] = mutant
+
     def __call__(self, verbose=True):
         """
         Runs the algorithm
@@ -257,31 +331,25 @@ class ToolboxAlgorithm(ABC):
                 )
 
             # Select the next generation
-            offspring = self._make_offspring()
-            kept_offspring = []
+            self.population += self._make_offspring()
             
-            # Apply crossover on the offspring
+            # Apply crossover on the population
             if self.breeder is not None:
-                tabOffspring = list(map(self.toolbox.clone, offspring))
-                for child1, child2 in zip(tabOffspring[::2], tabOffspring[1::2]):
+                tabOffspring = list(map(self.toolbox.clone, self.population))
+                for i, (child1, child2) in enumerate(zip(tabOffspring[::2], tabOffspring[1::2])):
                     if random.random() < self.cross_over_prob:
-                        self.toolbox.mate(child1, child2)
-                        kept_offspring.append(child1)
-                        kept_offspring.append(child2)
+                        self._mate(i, child1, child2)
+
                         del child1.fitness.values
                         del child2.fitness.values
-                    
-            # Apply mutation on the offspring
+            
+            # Apply mutation on the population
             if self.mutator is not None:
-                for mutant in offspring:
+                for i, mutant in enumerate(self.population):
                     if random.random() < self.mutation_prob:
-                        self.toolbox.mutate(mutant)
-                        kept_offspring.append(mutant)
-                        del mutant.fitness.values
+                        self._mutate(i, mutant)
 
-            # Adding the offspring to the population
-            self.population += kept_offspring
-            del offspring
+                        del mutant.fitness.values
 
             # Evaluate the individuals
             self._update_fitness(self.population)
@@ -295,23 +363,87 @@ class ToolboxAlgorithm(ABC):
             print()
 
         return self.population, self.logbook, self.hall_of_fame
+    
+    def reset(self):
+        """
+        Resets the algorithm
+        """
+
+        self.population = None
+        self.logbook = tools.Logbook(**self.logbook_parameters)
+        self.hall_of_fame = tools.HallOfFame(**self.hall_of_fame_parameters)
 
 
 class ToolboxAlgorithmGridWorld(ToolboxAlgorithm):
     """
-    Toolbox algorithm working on GridWorld (overrides _make_offspring)
+    Toolbox algorithm working on GridWorld
     """
 
-    def __init__(self, *args, ag_type=GridAgentNN, **kwargs):
-        super().__init__(*args, ag_type=ag_type, **kwargs)
+    def __init__(
+        self,
 
-    def _make_offspring(self):
+        *args,
+
+        ag_type=GridAgentGuesser,
+        environment=GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True),
+
+        generator={
+            "function":lambda x, **kw: x(**kw),
+            "parameters":{
+                "grid_size":40
+            }
+        },
+
+        mutator={
+            "function": lambda x, **kw: x.mutate(),
+            "parameters":{
+            }
+        },
+
+        **kwargs
+        ):
+        
+        super().__init__(
+            *args,
+            ag_type=ag_type,
+            environment=environment,
+            generator=generator,
+            mutator=mutator,
+            **kwargs
+        )
+
+    def _make_new_agent(self, ag):
         """
-        Makes an offspring (should be made from copies of individuals)
+        Increments the current id of GridAgent and gives it to the agent
         """
 
-        return [
-            add_agent(self.toolbox.clone(ind))
-            for ind in self.toolbox.select(self.population, self.offspring_size)
-        ]
+        ag.id = GridAgentGuesser.id
+        GridAgentGuesser.id += 1
+
+        return ag
+    
+    def _mate(self, i, child1, child2):
+        """
+        Mates two agents together, updates their id
+        """
+
+        super()._mate(i, child1, child2)
+        self._make_new_agent(child1)
+        self._make_new_agent(child2)
+    
+    def _mutate(self, i, mutant):
+        """
+        Mutates the agent, updates its id
+        """
+
+        super()._mutate(i, mutant)
+        self._make_new_agent(mutant)
+    
+    def reset(self):
+        """
+        Resets the algorithm and re-samples the goals of the environment
+        """
+
+        super().reset()
+        self.environment.reset(change_goals=True)
     
