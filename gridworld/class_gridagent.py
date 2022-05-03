@@ -3,14 +3,17 @@ import random
 import numpy as np
 
 
-# make it faster __[somethingIforgot]__
+# use __slots__
+# dict holding all attributes, makes creation of many instances much faster
+# currently not working with deap's hall_of_fame.. needs debugging
 class GridAgent:
     """
     A grid agent, able to take an action in GridWorld
     """
 
     id = 0
-
+    
+    # __slots__ = ("state_hist", "behavior", "action")
     def __init__(self):
         super().__init__()
 
@@ -37,6 +40,7 @@ class GridAgentNN(GridAgent, torch.nn.Module):
     A grid agent, able to take an action with a neural network
     """
 
+    # __slots__ = ("mds", "non_linearity", "batchnorm", "output_normaliser", "weights")
     def __init__(
         self,
 
@@ -139,6 +143,7 @@ class GridAgentGuesser(GridAgent):
     with special mutation operator
     """
 
+    # __slots__ = ("grid_size", "action")
     def __init__(self, grid_size):
         super().__init__()
 

@@ -14,8 +14,8 @@ if __name__ == "__main__":
 
     from class_gridagent import GridAgentNN, GridAgentGuesser
 
-    compute_NN = False
-    compute_Guesser = True
+    compute_NN = True
+    compute_Guesser = False
 
     # For NN agents
     if compute_NN is True:

@@ -109,8 +109,3 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
 
         # Updates the fitness (algorithm specific)
         # needs to be overriden
-
-
-        
-            
-        
