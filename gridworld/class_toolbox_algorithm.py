@@ -243,11 +243,11 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
     
     def _make_offspring(self):
         """
-        Makes an offspring (random, can be overriden)
+        Makes an offspring, can be overriden
         """
 
         return [
-            self.toolbox.individual()
+            self.toolbox.clone(self.population[_])
             for _ in range(self.offspring_size)
         ]
 
