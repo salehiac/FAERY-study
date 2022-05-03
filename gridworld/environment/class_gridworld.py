@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 from itertools import product
 
-from class_reward_function import RewardBinary
+from environment.class_reward_function import RewardBinary
 
-from utils_worlds import *
+from environment.utils_worlds import *
 
 
 class GridWorld:

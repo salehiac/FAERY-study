@@ -2,8 +2,8 @@ from abc import abstractmethod
 
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
 
-from class_gridworld import GridWorld
-from utils_worlds import GridWorldSparse40x40Mixed
+from environment.class_gridworld import GridWorld
+from environment.utils_worlds import GridWorldSparse40x40Mixed
 
 
 class MetaLearning(ToolboxAlgorithmGridWorld):

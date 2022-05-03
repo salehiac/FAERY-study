@@ -1,6 +1,7 @@
 from math import dist
 from scipy.spatial import KDTree
 
+
 class NoveltyArchive:
     """
     Archive used to compute novelty scores

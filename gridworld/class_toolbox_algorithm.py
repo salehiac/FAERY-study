@@ -1,15 +1,13 @@
-from venv import create
 import torch
 import random
 import numpy as np
 
 from scoop import futures
 
-from abc import ABC
 from deap import tools, creator, base
 
-from class_gridworld import GridWorld, GridWorldSparse40x40Mixed
-from class_gridagent import GridAgentGuesser
+from environment.class_gridworld import GridWorld, GridWorldSparse40x40Mixed
+from environment.class_gridagent import GridAgentGuesser
 
 
 class ToolboxAlgorithmFix(type):

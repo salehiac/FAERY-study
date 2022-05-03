@@ -1,6 +1,6 @@
 from itertools import product
 
-from class_distribution_shapes import *
+from environment.class_distribution_shapes import *
 
 # File containing dict of a world's size and list of distributions
 

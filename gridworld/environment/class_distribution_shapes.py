@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from class_distribution import UniformDistribution
+from environment.class_distribution import UniformDistribution
 
 
 class UniformCircular(UniformDistribution):

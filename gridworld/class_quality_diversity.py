@@ -95,7 +95,7 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
 
 if __name__ == "__main__":
 
-    from class_gridagent import GridAgentNN, GridAgentGuesser
+    from environment.class_gridagent import GridAgentNN, GridAgentGuesser
 
     compute_NN = True
     compute_Guesser = False
