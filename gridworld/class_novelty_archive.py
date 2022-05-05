@@ -35,14 +35,16 @@ class NoveltyArchive:
         Update the archive with a new behavior
         """
         
-        self.all_agents += [agent]
-        self.behaviors += [agent.behavior]
+        # MAYBE ONLY KEEP THE BEST INDIVIDUALS, NEED TO RECOMPUTE NOVELTY
+        if agent not in self.all_agents:
+            self.all_agents += [agent]
+            self.behaviors += [agent.behavior]
 
-        if self.max_size is not None:
-            self.all_agents = self.all_agents[-self.max_size:]
-            self.behaviors = self.behaviors[-self.max_size:]
-            
-        self.kdTree = KDTree(self.behaviors)
+            if self.max_size is not None:
+                self.all_agents = self.all_agents[-self.max_size:]
+                self.behaviors = self.behaviors[-self.max_size:]
+                
+            self.kdTree = KDTree(self.behaviors)
     
     def get_novelty(self, behavior):
         """

@@ -1,3 +1,4 @@
+import multiprocessing
 from scipy.spatial import KDTree
 
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
@@ -24,14 +25,11 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
 
         selection_weights=(1,1),
 
-        should_compile_stats_archive=True,
-
         **kwargs
         ):
         """
         archive : type and parameters of implemented archive
-        should_compile_stats_archive : boolean checking if statistics should be compiled on 
-                                       the whole archive, or just the current population
+
         """
 
         super().__init__(
@@ -42,8 +40,6 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
 
         self.archive = archive["type"](**archive["parameters"])
         self.env_kd_tree = KDTree(self.environment.reward_coords)
-
-        self.should_compile_stats_archive = should_compile_stats_archive
     
     def _update_fitness(self, population):
         """
@@ -65,24 +61,14 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
                     self.env_kd_tree.query(ag.behavior, k=1)[0]
                 )
             return True
+        
+        for ag in [ind for ind in population if ind.fitness.valid is False]:
+            ag.fitness.values = (
+                -1 * self.selection_weights[0] * float("inf"),
+                -1 * self.selection_weights[1] * float("inf")
+            )
+
         return False
-
-    def _compile_stats(self, population, logbook_kwargs={}):
-        """
-        Compile the stats on the whole archive
-        """
-
-        if self.should_compile_stats_archive is True:
-            self.hall_of_fame.update(self.archive.all_agents)
-            self.logbook.record(
-                **logbook_kwargs,
-                **self.statistics.compile(self.archive.all_agents)
-            )
-        else:
-            super()._compile_stats(
-                population=population,
-                logbook_kwargs=logbook_kwargs
-            )
     
     def reset(self):
         """
@@ -110,6 +96,16 @@ if __name__ == "__main__":
             nb_generations=20,
             population_size=10,
             offspring_size=10,
+
+            mutation_prob=.7,
+
+            archive={
+                "type":NoveltyArchive,
+                "parameters":{
+                    "neighbouring_size":2,
+                    "max_size":None
+                }
+            },
 
             ag_type=GridAgentNN,
 
@@ -154,7 +150,7 @@ if __name__ == "__main__":
             ag_type=GridAgentGuesser,
         )
 
-    pop, log, hof = ns()
+    pop, log, hof = ns(show_history=True)
     print(log)
 
     ns.environment.visualise_as_grid(

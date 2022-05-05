@@ -1,10 +1,12 @@
 import torch
 import random
+import networkx
 import numpy as np
+import matplotlib.pyplot as plt
 
 from scoop import futures
-
 from deap import tools, creator, base
+from networkx.drawing.nx_pydot import graphviz_layout
 
 from environment.class_gridworld import GridWorld, GridWorldSparse40x40Mixed
 from environment.class_gridagent import GridAgentGuesser
@@ -54,7 +56,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         nb_generations,
         population_size, offspring_size,
 
-        init_population=None,
+        stop_when_solution_found=False,
 
         creator_parameters={
             "individual_name":"Individual",
@@ -127,6 +129,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         ):
         """
 
+        init_pop : the population at the start of the learning process
+        stop_when_solution_found : stops the algorithm once a solution is found
+
         creator_parameters : parameters for deap's creator class
                              (name should be role-specific)
 
@@ -146,6 +151,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         hall_of_fame_parameters : parameters to use for the hall-of-fame
 
         multiprocessing : if True uses scoop, else uses deap's default map
+            /!\ work in progress
         """
 
         self.environment = environment
@@ -155,6 +161,8 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         self.population_size = population_size
         self.offspring_size = offspring_size
+
+        self.stop_when_solution_found = stop_when_solution_found
 
         # Initialiazing deap's toolbox
         self.creator_parameters = creator_parameters
@@ -220,10 +228,12 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         # Setting up multiprocessing
         if multiprocessing is True:
             self.toolbox.register("map", futures.map)
-    
-        # The population
-        if init_population is None or init_population == []:
-            self.population = None
+
+        self.history = tools.History()
+
+        self.population = None
+        self.done = False
+        self.solvers = []
     
     def __del__(self):
         """
@@ -240,16 +250,6 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             del creator.__dict__[self.creator_parameters["individual_name"]]
         except KeyError:
             pass
-    
-    def _make_offspring(self):
-        """
-        Makes an offspring, can be overriden
-        """
-
-        return [
-            self.toolbox.clone(self.population[_])
-            for _ in range(self.offspring_size)
-        ]
 
     def _evaluate(self, ag):
         """
@@ -257,17 +257,22 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         Returns its fitness
         """
 
-        return self.environment(ag, nb_steps=self.nb_generations)[0]
+        fitness, done, state_hist = self.environment(ag, nb_steps=self.nb_generations)
+        if done is True:
+            self.solvers.append(ag)
+            self.done = True
+        return fitness
     
     def _update_fitness(self, population) -> bool:
         """
         Evaluates a population of individuals and saves their fitness
         Typically where a novelty search would be implemented
 
-        MUST RETURN TRUE IF FITNESS VALUES WERE MODIFIED
+        Computing fitness on all individuals again (not just the new one) because of the fix
+        RETURN BOOLEAN IF FIX SHOULD BE APPLIED
         """
 
-        fitnesses = self.toolbox.map(self._evaluate, population)
+        fitnesses = map(self._evaluate, population)
         for ind, fit in zip(population, fitnesses):
             ind.fitness.values = fit
         
@@ -275,34 +280,19 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
     
     def _compile_stats(self, population, logbook_kwargs={}):
         """
-        Saves the statistics in class's objects
+        Saves the statistics
         """
+
+        for ind in population:
+            self.history.update([ind])
 
         self.hall_of_fame.update(population)
         self.logbook.record(
             **logbook_kwargs,
             **self.statistics.compile(population)
         )
-    
-    def _mate(self, i, child1, child2):
-        """
-        Mates two agents at index i
-        """
-
-        self.toolbox.mate(child1, child2)
-
-        self.population[2*i] = child1
-        self.population[2*i+1] = child2
-    
-    def _mutate(self, i, mutant):
-        """
-        Mutates the mutant at index i
-        """
-
-        self.toolbox.mutate(mutant)
-        self.population[i] = mutant
-
-    def __call__(self, verbose=True):
+        
+    def __call__(self, init_population=None, verbose=True, show_history=False):
         """
         Runs the algorithm
         """
@@ -310,12 +300,11 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         # Initialization
         if verbose is True:
             print("Initializing population..", end="\r")
-
-        if self.population is None:
-            self.population = [
-                self.toolbox.individual()
-                for _ in range(self.population_size)
-            ]
+        
+        self.population = [
+            self.toolbox.individual()
+            for _ in range(self.population_size)
+        ] if init_population is None else init_population
 
         self._update_fitness(self.population)
         self._compile_stats(self.population, {"gen":0})
@@ -329,36 +318,72 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 )
 
             # Select the next generation
-            self.population += self._make_offspring()
+            offspring = map(
+                self.toolbox.clone,
+                self.population
+            )
+            kept_offspring = []
             
-            # Apply crossover on the population
+            # Apply crossover on the offspring
             if self.breeder is not None:
-                tabOffspring = list(map(self.toolbox.clone, self.population))
-                for i, (child1, child2) in enumerate(zip(tabOffspring[::2], tabOffspring[1::2])):
+                for (child1, child2) in zip(offspring[::2], offspring[1::2]):
                     if random.random() < self.cross_over_prob:
-                        self._mate(i, child1, child2)
-
+                        self.toolbox.mate(child1, child2)
+                        kept_offspring.append(child1)
+                        kept_offspring.append(child2)
                         del child1.fitness.values
                         del child2.fitness.values
             
-            # Apply mutation on the population
+            # Apply mutation on the offspring
             if self.mutator is not None:
-                for i, mutant in enumerate(self.population):
+                for mutant in offspring:
                     if random.random() < self.mutation_prob:
-                        self._mutate(i, mutant)
-
+                        self.toolbox.mutate(mutant)
+                        kept_offspring.append(mutant)
                         del mutant.fitness.values
+        
 
-            # Evaluate the individuals
-            self._update_fitness(self.population)
+            # Fill the leftover space in the offspring
+            kept_offspring += [
+                self.toolbox.individual()
+                for _ in range(self.offspring_size - len(kept_offspring))
+            ]
 
-            # Keeping the best individuals of the population
-            self.population = self.toolbox.select(self.population, self.population_size)
+            # Evaluate the offspring
+            self._update_fitness(
+                [ind for ind in self.population if ind.fitness.valid is False] \
+                     + kept_offspring
+            )
 
+            # Select the individuals for the next population
+            self.population = self.toolbox.select(
+                self.population + kept_offspring,
+                self.population_size
+            )
+            
             self._compile_stats(self.population, {"gen":g+1})
+
+            if self.stop_when_solution_found and self.done:
+                if verbose is True:
+                    print()
+                    print("Solution found at generation {}".format(g), end='\r')
+                break
 
         if verbose is True:
             print()
+
+        if show_history is True:
+            graph = networkx.DiGraph(self.history.genealogy_tree)
+            graph = graph.reverse()     # Make the graph top-down
+
+            pos = graphviz_layout(graph, prog="dot")
+
+            for k in range(len(self.selection_weights)):
+                plt.figure()
+                plt.title("Evolutionary tree, F{}".format(k))
+                colors = [self.history.genealogy_history[i].fitness.values[k] for i in graph]
+                networkx.draw(graph, pos, node_color=colors)
+            plt.show()
 
         return self.population, self.logbook, self.hall_of_fame
     
@@ -368,6 +393,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         """
 
         self.population = None
+        self.done = False
+        self.solvers = []
+
         self.logbook = tools.Logbook(**self.logbook_parameters)
         self.hall_of_fame = tools.HallOfFame(**self.hall_of_fame_parameters)
 

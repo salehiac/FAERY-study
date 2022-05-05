@@ -1,3 +1,4 @@
+from matplotlib.pyplot import show
 from class_quality_diversity import QualityDiversity
 
 
@@ -71,7 +72,7 @@ if __name__ == "__main__":
             ag_type=GridAgentGuesser,
         )
 
-    pop, log, hof = ns()
+    pop, log, hof = ns(show_history=True)
     print(log)
 
     # Novelty over the all archive
