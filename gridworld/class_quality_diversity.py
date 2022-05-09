@@ -7,7 +7,7 @@ from class_novelty_archive import NoveltyArchive
 
 class QualityDiversity(ToolboxAlgorithmGridWorld):
     """
-    Simple novelty search class
+    Simple QD class
     """
 
     def __init__(

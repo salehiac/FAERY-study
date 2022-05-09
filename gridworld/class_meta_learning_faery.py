@@ -23,7 +23,7 @@ class MetaLearningFAERY(MetaLearning):
         
         parents_and_depth = []
         for parent in successors:
-            parents_and_depth.append(self._find_roots(graph, parent, depth+1))
+            parents_and_depth.append += self._find_roots(graph, parent, depth+1)
         
         unique_nodes = {}
         for pd in parents_and_depth:
