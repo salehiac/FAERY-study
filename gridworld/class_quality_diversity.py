@@ -1,4 +1,3 @@
-import multiprocessing
 from scipy.spatial import KDTree
 
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
@@ -113,30 +112,6 @@ if __name__ == "__main__":
                 "individual_name":"NNIndividual",
                 "fitness_name":"NNFitness",
              },
-
-            generator={
-                "function":lambda x, **kw: x(**kw),
-                "parameters":{
-                    "input_dim":2, 
-                    "output_dim":2,
-                    "hidden_layers":3, 
-                    "hidden_dim":10,
-                    "use_batchnorm":False,
-                    "non_linearity":torch.tanh, 
-                    "output_normalizer":lambda x: torch.round((40 - 1) * abs(x)).int(),
-                    # Something is wrong in normalization
-                }
-            },
-
-            mutator={
-                "function":tools.mutPolynomialBounded,
-                "parameters":{
-                    "eta":15,
-                    "low":-1,
-                    "up":1,
-                    "indpb":.3,
-                }
-            },
         )
 
     # For guesser agents (those in the article)

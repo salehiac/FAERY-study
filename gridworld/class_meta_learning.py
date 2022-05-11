@@ -1,4 +1,7 @@
+import torch
+
 from abc import abstractmethod
+from deap import tools
 
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
 
@@ -34,13 +37,14 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         },
         init_environments=None,
 
+        outer_parameters_name=("./deap_parameters/parameters.py", "parameters"),
+        inner_parameters_name=("./deap_parameters/parameters.py", "parameters"),
+
         toolbox_kwargs_inner={
         },
 
-        multiprocessing=True,
+        multiprocessing=False,
 
-        breeder=None,
-        mutator=None,
         **toolbox_kwargs_outer,
         ):
         """
@@ -54,35 +58,35 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
             useful if user wants to test adaptation on a specific array of tasks
             (ex : grasping and pushing; walking and jumping; etc...)
         """
-        
+
         super().__init__(
             nb_generations=nb_generations_outer,
             population_size=population_size_outer,
             offspring_size=offspring_size_outer,
-            breeder=breeder,
-            mutator=mutator,
+            parameters_name=outer_parameters_name,
             multiprocessing=multiprocessing,
             **toolbox_kwargs_outer
         )
 
-        if init_environments is None or len(init_environments):
-            environments = nb_instances * [environment["type"](**environment["parameters"])]
+        if init_environments is None or len(init_environments) == 0:
+            environments = [environment["type"](**environment["parameters"]) for _ in range(nb_instances)]
         else:
             environments = init_environments[:]
 
         self.instances = [
             inner_algorithm(
                 environment=environments[i],
-                nb_generations=self.nb_generations_inner,
-                population_size=self.population_size_inner,
-                offspring_size=self.offspring_size_inner,
-
+                nb_generations=nb_generations_inner,
+                population_size=population_size_inner,
+                offspring_size=offspring_size_inner,
+                parameters_name=inner_parameters_name,
                 ag_type=self.ag_type,
-                meta_generation=self.generation
-                **self.toolbox_kwargs_inner
+                **toolbox_kwargs_inner
             ) for i in range(nb_instances)
         ]
 
+        self.instances[0].printpop = True
+        
         # Each chapter is a meta_step, inside of which each chapter is an instance
         self.logbook.header = [
             self.metastep_header.format(k) for k in range(self.nb_generations)
@@ -111,20 +115,22 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
             instance.reset()
             # We disregard the population as parameter
             #   because the inner algorithms use the whole prior population
-            instance.population = self.population
+            instance.population = self.toolbox.clone(self.population)
 
         # launching instances (parallellized if self.multiprocessing = True)
-        results = self.toolbox.map(
+        results = list(self.toolbox.map(
             lambda instance: instance(verbose=False),
             self.instances
-        )
+        ))
 
         # Updating the logbook
-        self.logbook.chapters[
-            self.metastep_header.format(self.generation)
-        ].chapters[
-            self.instance_header.format(i)
-        ] = instance.logbook
+        for i, instance in enumerate(self.instances):
+            self.logbook.chapters[
+                self.metastep_header.format(self.generation)
+            ].chapters[
+                self.instance_header.format(i)
+            ] = instance.logbook
+
         self.generation += 1
 
         # Updates the fitness (algorithm specific)

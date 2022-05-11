@@ -24,6 +24,7 @@ class GridAgent:
         self.state_hist = []
         self.behavior = None
         self.action = None
+        self.done = False
     
     def update_behavior(self, state_hist):
         """

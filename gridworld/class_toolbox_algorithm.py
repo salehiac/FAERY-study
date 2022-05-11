@@ -1,7 +1,6 @@
-import torch
 import random
 import networkx
-import numpy as np
+import importlib.util
 import matplotlib.pyplot as plt
 
 from scoop import futures
@@ -66,63 +65,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         selection_weights=(1,),
         cross_over_prob=.3, mutation_prob=.1,
         
-        generator={
-            "function":lambda x, **kw: x(**kw),
-            "parameters":{
-                "input_dim":2, 
-                "output_dim":2,
-                "hidden_layers":3, 
-                "hidden_dim":10,
-                "use_batchnorm":False,
-                "non_linearity":torch.tanh, 
-                "output_normalizer":lambda x: x,
-            }
-        },
-
-        # breeder={
-        #     "function":tools.cxSimulatedBinary,
-        #     "parameters":{
-        #         "eta":15,
-        #     }
-        # },
-        breeder=None,
-
-        mutator={
-            "function":tools.mutPolynomialBounded,
-            "parameters":{
-                "eta":15,
-                "low":-1,
-                "up":1,
-                "indpb":.3,
-            }
-        },
-
-        selector={
-            "function":tools.selBest,
-            "parameters":{
-
-            }
-        },
-
-        statistics={
-            "parameters":{
-                "key":lambda ind: ind.fitness.values
-            },
-            "to_register":{
-                "avg": lambda x: np.mean(x, axis=0),
-                "std": lambda x: np.std(x, axis=0),
-                "min": lambda x: np.min(x, axis=0),
-                "max": lambda x: np.max(x, axis=0),
-                # "fit": lambda x: x,
-            },
-        },
-
-        logbook_parameters={
-        },
-
-        hall_of_fame_parameters={
-            "maxsize":1,
-        },
+        parameters_name=("./deap_parameters/parameters.py", "parameters"),
 
         multiprocessing = False
         
@@ -141,20 +84,15 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         cross_over_prob, mutation_prob : cross-over and mutation probability at each step
         
-        generator, breeder, mutator, selector : functions to use for corresponding deap 
-            operators, define function then its parameters
-        
-        statistics : statistics deap will follow during the algorithm
-
-        logbook_parameters : evolution records as chronological list of dictionnaries (optional)
-        
-        hall_of_fame_parameters : parameters to use for the hall-of-fame
+        parameters_name : tuple containing the name of the module and class that should be loaded
+            for the algorithm's generator, mutator and breeder
 
         multiprocessing : if True uses scoop, else uses deap's default map
             /!\ work in progress
         """
 
         self.environment = environment
+        self.ag_type = ag_type
         self.cross_over_prob = cross_over_prob
         self.mutation_prob = mutation_prob
         self.nb_generations = nb_generations
@@ -174,7 +112,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 base.Fitness,
                 weights=len(selection_weights) * (1,)
             ) # ISSUE WITH DEAP, CAN'T USE WEIGHTS AT 0, WE APPLY THEM MANUALLY INSTEAD
-            self.selection_weights = selection_weights 
+        self.selection_weights = selection_weights 
 
         if self.creator_parameters["individual_name"] not in creator.__dict__:
             creator.create(
@@ -183,46 +121,52 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 fitness=creator.__dict__[self.creator_parameters["fitness_name"]]
             )
 
+        # Importing low level parameters
+        spec = importlib.util.spec_from_file_location(parameters_name[1], parameters_name[0])
+        foo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foo)
+        parameters = foo.ParametersNN()
+
         self.toolbox = base.Toolbox()
 
         self.toolbox.register(
             "individual",
-            generator["function"],
+            parameters.generator["function"],
             creator.__dict__[self.creator_parameters["individual_name"]],
-            **generator["parameters"]
+            **parameters.generator["parameters"]
         )
 
-        if breeder is not None:
+        if parameters.breeder is not None:
             self.breeder = True
             self.toolbox.register(
                 "mate",
-                breeder["function"],
-                **breeder["parameters"]
+                parameters.breeder["function"],
+                **parameters.breeder["parameters"]
             )
         else:   self.breeder = None
 
-        if mutator is not None:
+        if parameters.mutator is not None:
             self.mutator = True
             self.toolbox.register(
                 "mutate",
-                mutator["function"],
-                **mutator["parameters"]
+                parameters.mutator["function"],
+                **parameters.mutator["parameters"]
             )
         else:   self.mutator = None
 
-        self.toolbox.register("select", selector["function"], **selector["parameters"])
+        self.toolbox.register("select", parameters.selector["function"], **parameters.selector["parameters"])
 
         # Statistics gather results
-        self.statistics = tools.Statistics(**statistics["parameters"])
-        for name, func in statistics["to_register"].items():
+        self.statistics = tools.Statistics(**parameters.statistics["parameters"])
+        for name, func in parameters.statistics["to_register"].items():
             self.statistics.register(name, func)
         
         #   Evolution history
-        self.logbook_parameters = logbook_parameters
+        self.logbook_parameters = parameters.logbook_parameters
         self.logbook = tools.Logbook(**self.logbook_parameters)
 
         #   Remembering the best individual(s)
-        self.hall_of_fame_parameters = hall_of_fame_parameters
+        self.hall_of_fame_parameters = parameters.hall_of_fame_parameters
         self.hall_of_fame = tools.HallOfFame(**self.hall_of_fame_parameters)
 
         # Setting up multiprocessing
@@ -233,7 +177,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         self.population = None
         self.done = False
-        self.solvers = []
+        self.solvers = set()
     
     def __del__(self):
         """
@@ -257,10 +201,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         Returns its fitness
         """
 
-        fitness, done, state_hist = self.environment(ag, nb_steps=self.nb_generations)
-        if done is True:
-            self.solvers.append(ag)
-            self.done = True
+        fitness, ag.done, state_hist = self.environment(ag, nb_steps=self.nb_generations)
+        self.done = self.done or ag.done
+        
         return fitness
     
     def _update_fitness(self, population) -> bool:
@@ -278,14 +221,22 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         
         return True
     
-    def _compile_stats(self, population, logbook_kwargs={}):
+    def _update_history(self, population):
         """
-        Saves the statistics
+        Updates the evolutionnary tree with the given population
         """
 
         for ind in population:
             self.history.update([ind])
 
+            if ind.done is True:
+                self.solvers.add(ind)
+
+    def _compile_stats(self, population, logbook_kwargs={}):
+        """
+        Saves the statistics
+        """
+        
         self.hall_of_fame.update(population)
         self.logbook.record(
             **logbook_kwargs,
@@ -306,7 +257,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             for _ in range(self.population_size)
         ] if init_population is None else init_population
 
+        #   Computing the initial fitness
         self._update_fitness(self.population)
+        self._update_history(self.population)
         self._compile_stats(self.population, {"gen":0})
 
         # Running the algorithm
@@ -344,10 +297,10 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         
 
             # Fill the leftover space in the offspring
-            kept_offspring += [
-                self.toolbox.individual()
-                for _ in range(self.offspring_size - len(kept_offspring))
-            ]
+            # kept_offspring += [
+            #     self.toolbox.individual()
+            #     for _ in range(self.offspring_size - len(kept_offspring))
+            # ]
 
             # Evaluate the offspring
             self._update_fitness(
@@ -360,8 +313,10 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 self.population + kept_offspring,
                 self.population_size
             )
-            
+
+            self._update_history(set(self.population) & set(kept_offspring))
             self._compile_stats(self.population, {"gen":g+1})
+
 
             if self.stop_when_solution_found and self.done:
                 if verbose is True:
@@ -384,7 +339,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 colors = [self.history.genealogy_history[i].fitness.values[k] for i in graph]
                 networkx.draw(graph, pos, node_color=colors)
             plt.show()
-
+            
         return self.population, self.logbook, self.hall_of_fame
     
     def reset(self):
@@ -394,8 +349,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         self.population = None
         self.done = False
-        self.solvers = []
+        self.solvers = set()
 
+        self.history = tools.History()
         self.logbook = tools.Logbook(**self.logbook_parameters)
         self.hall_of_fame = tools.HallOfFame(**self.hall_of_fame_parameters)
 
@@ -411,30 +367,19 @@ class ToolboxAlgorithmGridWorld(ToolboxAlgorithm):
         *args,
 
         ag_type=GridAgentGuesser,
-        environment=GridWorld(**GridWorldSparse40x40Mixed, is_guessing_game=True),
 
-        generator={
-            "function":lambda x, **kw: x(**kw),
-            "parameters":{
-                "grid_size":40
-            }
-        },
-
-        mutator={
-            "function": lambda x, **kw: x.mutate(),
-            "parameters":{
-            }
-        },
+        environment=GridWorld(
+            **GridWorldSparse40x40Mixed,
+            is_guessing_game=True
+        ),
 
         **kwargs
         ):
-        
+
         super().__init__(
             *args,
             ag_type=ag_type,
             environment=environment,
-            generator=generator,
-            mutator=mutator,
             **kwargs
         )
 
@@ -471,5 +416,5 @@ class ToolboxAlgorithmGridWorld(ToolboxAlgorithm):
         """
 
         super().reset()
-        self.environment.reset(change_goals=True)
+        self.environment.reset(change_goal=True)
     

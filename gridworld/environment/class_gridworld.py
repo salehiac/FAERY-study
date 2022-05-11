@@ -34,7 +34,7 @@ class GridWorld:
         size,
         start_distribution,
         distributions,
-        goal_type="mix 1",
+        goal_type="all",
         reward_function=RewardBinary(),
         is_guessing_game=False,
         walls=[],
@@ -198,7 +198,7 @@ class GridWorld:
                 raise ValueError("Guess taken in a wall")
 
             self.current_pos = action
-            done = True
+            done = self.current_pos in self.reward_coords
 
         self.state_hist.append(self.current_pos)
         return self.current_pos, self.reward_function(self), done
@@ -213,6 +213,9 @@ class GridWorld:
         if hasattr(ag, "eval"):  # in case of torch agent
             ag.eval()
         
+        if self.is_guessing_game is True:
+            nb_steps = 1
+
         with torch.no_grad():
             fitness = 0
             obs = self.current_pos
