@@ -96,8 +96,6 @@ if __name__ == "__main__":
             population_size=10,
             offspring_size=10,
 
-            mutation_prob=.7,
-
             archive={
                 "type":NoveltyArchive,
                 "parameters":{

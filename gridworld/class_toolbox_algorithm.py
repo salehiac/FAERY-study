@@ -31,7 +31,7 @@ class ToolboxAlgorithmFix(type):
                         ag.fitness.values[i] * self.selection_weights[i]
                         for i in range(len(self.selection_weights))
                     )
-        
+
         return wrapper
 
     def __new__(cls, name, bases, attr):
@@ -55,7 +55,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         nb_generations,
         population_size, offspring_size,
 
-        stop_when_solution_found=False,
+        stop_when_solution_found=True,
 
         creator_parameters={
             "individual_name":"Individual",
@@ -195,6 +195,16 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         except KeyError:
             pass
 
+    def _mate(self, child1, child2):
+        """Allows for special (evironment specific) operations to be performed during mating"""
+
+        self.toolbox.mate(child1, child2)
+
+    def _mutate(self, mutant):
+        """Allows for special (evironment specific) operations to be performed during mutation"""
+
+        self.toolbox.mutate(mutant)
+
     def _evaluate(self, ag):
         """
         Runs the environment on a given agent
@@ -202,8 +212,10 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         """
 
         fitness, ag.done, state_hist = self.environment(ag, nb_steps=self.nb_generations)
-        self.done = self.done or ag.done
-        
+        if ag.done is True:
+            self.done = True
+            self.solvers.add(ag)   
+
         return fitness
     
     def _update_fitness(self, population) -> bool:
@@ -226,11 +238,8 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         Updates the evolutionnary tree with the given population
         """
 
-        for ind in population:
+        for ind in sorted(population, key=lambda x: x.id):
             self.history.update([ind])
-
-            if ind.done is True:
-                self.solvers.add(ind)
 
     def _compile_stats(self, population, logbook_kwargs={}):
         """
@@ -242,7 +251,30 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             **logbook_kwargs,
             **self.statistics.compile(population)
         )
+    
+    def _transform(self, offspring):
+        """
+        Apply transformations to the offspring, such as breeding and mutations
+        """
+
+        # Apply crossover on the offspring
+        if self.breeder is not None:
+            for (child1, child2) in zip(offspring[::2], offspring[1::2]):
+                if random.random() < self.cross_over_prob:
+                    self._mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
         
+        # Apply mutation on the offspring
+        if self.mutator is not None:
+            for mutant in offspring:
+                if random.random() < self.mutation_prob:
+                    self._mutate(mutant)
+                    del mutant.fitness.values
+
+        return offspring
+
+
     def __call__(self, init_population=None, verbose=True, show_history=False):
         """
         Runs the algorithm
@@ -259,7 +291,8 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         #   Computing the initial fitness
         self._update_fitness(self.population)
-        self._update_history(self.population)
+        if len(self.history.genealogy_history) == 0:
+            self._update_history(self.population)
         self._compile_stats(self.population, {"gen":0})
 
         # Running the algorithm
@@ -271,52 +304,33 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 )
 
             # Select the next generation
-            offspring = map(
-                self.toolbox.clone,
-                self.population
-            )
-            kept_offspring = []
-            
-            # Apply crossover on the offspring
-            if self.breeder is not None:
-                for (child1, child2) in zip(offspring[::2], offspring[1::2]):
-                    if random.random() < self.cross_over_prob:
-                        self.toolbox.mate(child1, child2)
-                        kept_offspring.append(child1)
-                        kept_offspring.append(child2)
-                        del child1.fitness.values
-                        del child2.fitness.values
-            
-            # Apply mutation on the offspring
-            if self.mutator is not None:
-                for mutant in offspring:
-                    if random.random() < self.mutation_prob:
-                        self.toolbox.mutate(mutant)
-                        kept_offspring.append(mutant)
-                        del mutant.fitness.values
-        
-
-            # Fill the leftover space in the offspring
-            # kept_offspring += [
-            #     self.toolbox.individual()
-            #     for _ in range(self.offspring_size - len(kept_offspring))
-            # ]
+            offspring = self._transform(list(map(
+                    self.toolbox.clone,
+                    self.population
+            )))
 
             # Evaluate the offspring
-            self._update_fitness(
-                [ind for ind in self.population if ind.fitness.valid is False] \
-                     + kept_offspring
-            )
+            self._update_fitness(offspring)
 
             # Select the individuals for the next population
+            #   Lots of manipulation to make sure they're selected uniquely
+            #       (because of deap's toolbox.clone)
+            id_to_agent = {
+                ag.id:ag for ag in self.population + offspring
+            }
+
+            old_population_id = [ag.id for ag in self.population]
             self.population = self.toolbox.select(
-                self.population + kept_offspring,
+                list(id_to_agent.values()),
                 self.population_size
             )
+            new_population_id = [ag.id for ag in self.population]
 
-            self._update_history(set(self.population) & set(kept_offspring))
+            self._update_history([
+                id_to_agent[i]
+                for i in set(new_population_id) - set(old_population_id)
+            ])
             self._compile_stats(self.population, {"gen":g+1})
-
 
             if self.stop_when_solution_found and self.done:
                 if verbose is True:
@@ -328,20 +342,26 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             print()
 
         if show_history is True:
-            graph = networkx.DiGraph(self.history.genealogy_tree)
-            graph = graph.reverse()     # Make the graph top-down
-
-            pos = graphviz_layout(graph, prog="dot")
-
-            for k in range(len(self.selection_weights)):
-                plt.figure()
-                plt.title("Evolutionary tree, F{}".format(k))
-                colors = [self.history.genealogy_history[i].fitness.values[k] for i in graph]
-                networkx.draw(graph, pos, node_color=colors)
-            plt.show()
+            self.show_history()
             
         return self.population, self.logbook, self.hall_of_fame
     
+    def show_history(self):
+        """
+        Shows the history tree generated during execution
+        """
+
+        graph = networkx.DiGraph(self.history.genealogy_tree)
+        graph = graph.reverse()     # Make the graph top-down
+
+        pos = graphviz_layout(graph, prog="dot")
+        for k in range(len(self.selection_weights)):
+            plt.figure()
+            plt.title("Evolutionary tree, F{}".format(k))
+            colors = [self.history.genealogy_history[i].fitness.values[k] for i in graph]
+            networkx.draw(graph, pos, node_color=colors)
+        plt.show()
+
     def reset(self):
         """
         Resets the algorithm
@@ -388,26 +408,26 @@ class ToolboxAlgorithmGridWorld(ToolboxAlgorithm):
         Increments the current id of GridAgent and gives it to the agent
         """
 
-        ag.id = GridAgentGuesser.id
-        GridAgentGuesser.id += 1
-
+        ag.id = self.ag_type.id
+        self.ag_type.id += 1
+  
         return ag
     
-    def _mate(self, i, child1, child2):
+    def _mate(self, child1, child2):
         """
         Mates two agents together, updates their id
         """
 
-        super()._mate(i, child1, child2)
+        super()._mate(child1, child2)
         self._make_new_agent(child1)
         self._make_new_agent(child2)
     
-    def _mutate(self, i, mutant):
+    def _mutate(self, mutant):
         """
         Mutates the agent, updates its id
         """
 
-        super()._mutate(i, mutant)
+        super()._mutate(mutant)
         self._make_new_agent(mutant)
     
     def reset(self):

@@ -34,7 +34,7 @@ class GridWorld:
         size,
         start_distribution,
         distributions,
-        goal_type="all",
+        goal_type="uniform 10",
         reward_function=RewardBinary(),
         is_guessing_game=False,
         walls=[],

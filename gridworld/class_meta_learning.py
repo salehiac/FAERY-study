@@ -1,7 +1,7 @@
-import torch
+from copy import deepcopy
+import random
 
 from abc import abstractmethod
-from deap import tools
 
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
 
@@ -107,21 +107,27 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
     def _update_fitness(self, population):
         """
         Updates the generation and runs the instances
-        population : disregarded argument
         """
 
         # Preparing the instances
         for i, instance in enumerate(self.instances):
             instance.reset()
-            # We disregard the population as parameter
-            #   because the inner algorithms use the whole prior population
-            instance.population = self.toolbox.clone(self.population)
 
         # launching instances (parallellized if self.multiprocessing = True)
         results = list(self.toolbox.map(
-            lambda instance: instance(verbose=False),
+            lambda instance: instance(
+                init_population=self.toolbox.clone(population),
+                verbose=False,
+                show_history=False
+            ),
             self.instances
         ))
+       
+        # As far as the inner algorithms are concerned, the init population doesn't have any parent
+        #   prevents looping in meta-learning...
+        for instance in self.instances:
+            for k in range(len(population)):
+                instance.history.genealogy_tree[k+1] = tuple()
 
         # Updating the logbook
         for i, instance in enumerate(self.instances):
