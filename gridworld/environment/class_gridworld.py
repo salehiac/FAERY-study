@@ -34,7 +34,7 @@ class GridWorld:
         size,
         start_distribution,
         distributions,
-        goal_type="uniform 10",
+        goal_type="weighted 5",
         reward_function=RewardBinary(),
         is_guessing_game=False,
         walls=[],
@@ -43,7 +43,9 @@ class GridWorld:
         is_guessing_game : agent will only guess a single cell
         goal_type : 
                       "uniform N" uniformly sample a reward from all goals, N times;
-                      "mix N" sample a reward from a random distribution, N times;
+                      "mix N" randomly choose a distribution, then sample it once, N times;
+                      "concentrated N" randomly choose a distribution, then sample it N times;
+                      "weigthed N" randomly choose a distribution (according to their total mass), then sample it N times;
                       "unique N" N rewards per distribution;
                       "all" all potential goals are reward;
         """
@@ -122,6 +124,38 @@ class GridWorld:
                     self.reward_coords.append(new_goal)
                     i += 1
             
+            elif self.goal_type == "concentrated":
+                i, failed = 0, 0
+
+                distribution = random.choice(self.distributions)
+                while i < self.nb_samples:
+                    new_goal = tuple(distribution.sample())
+
+                    if new_goal in self.reward_coords:
+                        failed += 1
+                        if failed >= self.max_sample_failure:
+                            raise ValueError("Failed to sample, shapes might be too small")
+                        continue
+                    
+                    self.reward_coords.append(new_goal)
+                    i += 1
+            
+            elif self.goal_type == "weighted":
+                i, failed = 0, 0
+
+                distribution = random.choices(self.distributions, weights=[d.size for d in self.distributions])[0]
+                while i < self.nb_samples:
+                    new_goal = tuple(distribution.sample())
+
+                    if new_goal in self.reward_coords:
+                        failed += 1
+                        if failed >= self.max_sample_failure:
+                            raise ValueError("Failed to sample, shapes might be too small")
+                        continue
+                    
+                    self.reward_coords.append(new_goal)
+                    i += 1
+
             elif self.goal_type == "unique":
                 for distribution in self.distributions:
                     if self.nb_samples >= len(distribution.potential_area):

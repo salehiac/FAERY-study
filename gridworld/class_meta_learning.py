@@ -72,6 +72,7 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
             environments = [environment["type"](**environment["parameters"]) for _ in range(nb_instances)]
         else:
             environments = init_environments[:]
+        self.model_environment = deepcopy(environments[0])
 
         self.instances = [
             inner_algorithm(

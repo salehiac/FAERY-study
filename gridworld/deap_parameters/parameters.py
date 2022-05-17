@@ -4,6 +4,7 @@ import numpy as np
 from deap import tools
 
 
+# Would be better if single object, you could pass type as argument   
 class ParametersCommon:
     """
     Class holding low level parameters of deap algorithm, parameters common to all environments
@@ -110,3 +111,5 @@ class ParametersGuesser(ParametersCommon):
         "parameters":{
         }
     }
+
+    breeder=None

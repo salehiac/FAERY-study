@@ -99,7 +99,7 @@ class MetaLearningFAERY(MetaLearning):
 
         if self.should_show_evo_tree is True:
             for i, ag in enumerate(population):
-                print(i, ag.id, ag.fitness.values)
+                print("Place in meta-pop: {}\tID: {}\tFitness: {}".format(i, ag.id, ag.fitness.values))
             self.show_evo_tree()
 
         return False
@@ -150,13 +150,13 @@ class MetaLearningFAERY(MetaLearning):
 
 if __name__ == "__main__":
 
-    from environment.class_gridagent import GridAgentNN
+    from environment.class_gridagent import GridAgentNN, GridAgentGuesser
     from class_quality_diversity import QualityDiversity
 
     faery = MetaLearningFAERY(
         nb_instances=5,
 
-        nb_generations_outer=10,
+        nb_generations_outer=70,
         population_size_outer=5, offspring_size_outer=5,
 
         inner_algorithm=QualityDiversity,
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
         selection_weights=(1,1),
 
-        ag_type=GridAgentNN,
+        ag_type=GridAgentGuesser,
 
         creator_parameters={
             "individual_name":"NNIndividual",
@@ -176,7 +176,45 @@ if __name__ == "__main__":
             "stop_when_solution_found":True,
             "mutation_prob":.3,
         },
+
+        mutation_prob=1
     )
 
     faery.should_show_evo_tree = True
     pop, log, hof = faery(show_history=True)
+
+    # Showing the meta-population history
+    #   We have to run them on an environment first to generate their behaviors
+    for ag in faery.history.genealogy_history.values():
+        faery.model_environment(ag, 1)
+    
+    #   We don't need to show the sampled rewards
+    faery.model_environment.reward_coords = []
+
+    grid_hist = faery.model_environment.visualise_as_grid(
+        list_state_hist=[[ag.behavior] for ag in faery.history.genealogy_history.values()],
+        show_traj=True,
+        show_start=False,
+        show_end=True,
+        show=False
+    )
+
+    faery.model_environment.reset()
+    for ag in faery.population:
+        faery.model_environment(ag, 1)
+    
+    faery.model_environment.reward_coords = []
+
+    grid_final = faery.model_environment.visualise_as_grid(
+        list_state_hist=[[ag.behavior] for ag in faery.population],
+        show_traj=True,
+        show_start=False,
+        show_end=True,
+        show=False
+    )
+
+    fig, axs = plt.subplots(ncols=2)
+    axs[0].imshow(grid_hist)
+    axs[1].imshow(grid_final)
+
+    plt.show()

@@ -125,7 +125,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         spec = importlib.util.spec_from_file_location(parameters_name[1], parameters_name[0])
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        parameters = foo.ParametersNN()
+        parameters = foo.ParametersGuesser()
 
         self.toolbox = base.Toolbox()
 

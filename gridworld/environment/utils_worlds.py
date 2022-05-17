@@ -11,7 +11,7 @@ GridWorldSparse40x40Mixed = {
         UniformCircular((6, 31), 3),
         UniformCircular((13, 5), 3),
     ],
-    "start_distribution":UniformCircular((1,1), 0)
+    "start_distribution":UniformHorizontalStripes((0,0), 40, 1, 0)
 }
 
 GridWorldSparse40x40MixedCut = {

@@ -82,8 +82,8 @@ if __name__ == "__main__":
 
     from environment.class_gridagent import GridAgentNN, GridAgentGuesser
 
-    compute_NN = True
-    compute_Guesser = False
+    compute_NN = False
+    compute_Guesser = True
 
     # For NN agents
     if compute_NN is True:
@@ -116,9 +116,9 @@ if __name__ == "__main__":
     if compute_Guesser is True:
       
         ns = QualityDiversity(
-            nb_generations=20,
-            population_size=10,
-            offspring_size=10,
+            nb_generations=100,
+            population_size=20,
+            offspring_size=20,
 
             ag_type=GridAgentGuesser,
         )
