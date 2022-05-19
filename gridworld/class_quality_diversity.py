@@ -96,14 +96,6 @@ if __name__ == "__main__":
             population_size=10,
             offspring_size=10,
 
-            archive={
-                "type":NoveltyArchive,
-                "parameters":{
-                    "neighbouring_size":2,
-                    "max_size":None
-                }
-            },
-
             ag_type=GridAgentNN,
 
             creator_parameters={
@@ -116,14 +108,16 @@ if __name__ == "__main__":
     if compute_Guesser is True:
       
         ns = QualityDiversity(
-            nb_generations=100,
+            nb_generations=50,
             population_size=20,
             offspring_size=20,
+
+            max_steps_after_found=10,
 
             ag_type=GridAgentGuesser,
         )
 
-    pop, log, hof = ns(show_history=True)
+    pop, log, hof = ns(show_history=True, verbose=True)
     print(log)
 
     ns.environment.visualise_as_grid(

@@ -56,6 +56,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         population_size, offspring_size,
 
         stop_when_solution_found=True,
+        max_steps_after_found=0,
 
         creator_parameters={
             "individual_name":"Individual",
@@ -74,6 +75,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         init_pop : the population at the start of the learning process
         stop_when_solution_found : stops the algorithm once a solution is found
+        max_steps_after_found : steps to run after the first solution is found
 
         creator_parameters : parameters for deap's creator class
                              (name should be role-specific)
@@ -101,6 +103,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         self.offspring_size = offspring_size
 
         self.stop_when_solution_found = stop_when_solution_found
+        self.max_steps_after_found = max_steps_after_found
 
         # Initialiazing deap's toolbox
         self.creator_parameters = creator_parameters
@@ -296,6 +299,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         self._compile_stats(self.population, {"gen":0})
 
         # Running the algorithm
+        supp_steps = 0
         for g in range(self.nb_generations):
             if verbose is True:
                 print(
@@ -336,7 +340,10 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 if verbose is True:
                     print()
                     print("Solution found at generation {}".format(g), end='\r')
-                break
+                
+                supp_steps += 1
+                if supp_steps > self.max_steps_after_found:
+                    break
 
         if verbose is True:
             print()

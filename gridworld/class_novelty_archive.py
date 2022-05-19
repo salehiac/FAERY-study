@@ -1,4 +1,9 @@
-from math import dist
+try:
+    from math import dist
+except ImportError:
+    import math
+    dist = lambda x, y: math.sqrt(sum([(x[i]-y[i])**2 for i in range(len(x))]))
+
 from scipy.spatial import KDTree
 
 

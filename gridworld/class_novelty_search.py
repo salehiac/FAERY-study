@@ -28,7 +28,7 @@ if __name__ == "__main__":
             population_size=10,
             offspring_size=10,
 
-            ag_type=GridAgentNN,
+            ag_type=GridAgentGuesser,
 
             creator_parameters={
                 "individual_name":"NNIndividual",

@@ -156,12 +156,13 @@ if __name__ == "__main__":
     faery = MetaLearningFAERY(
         nb_instances=5,
 
-        nb_generations_outer=70,
-        population_size_outer=5, offspring_size_outer=5,
+        nb_generations_outer=10,
+        population_size_outer=25, offspring_size_outer=25,
 
         inner_algorithm=QualityDiversity,
         nb_generations_inner=20,
-        population_size_inner=5, offspring_size_inner=5,
+        population_size_inner=25, offspring_size_inner=25,
+        inner_max_steps_after_found=10,
 
         selection_weights=(1,1),
 
@@ -174,13 +175,13 @@ if __name__ == "__main__":
 
         toolbox_kwargs_inner={
             "stop_when_solution_found":True,
-            "mutation_prob":.3,
+            "mutation_prob":1,
         },
 
         mutation_prob=1
     )
 
-    faery.should_show_evo_tree = True
+    faery.should_show_evo_tree = False
     pop, log, hof = faery(show_history=True)
 
     # Showing the meta-population history

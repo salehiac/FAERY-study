@@ -26,6 +26,7 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         inner_algorithm,
         nb_generations_inner,
         population_size_inner, offspring_size_inner,
+        inner_max_steps_after_found=10,
         
         nb_instances=25,
         environment={
@@ -82,6 +83,7 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
                 offspring_size=offspring_size_inner,
                 parameters_name=inner_parameters_name,
                 ag_type=self.ag_type,
+                max_steps_after_found=inner_max_steps_after_found,
                 **toolbox_kwargs_inner
             ) for i in range(nb_instances)
         ]
