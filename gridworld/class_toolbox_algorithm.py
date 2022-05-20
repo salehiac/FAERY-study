@@ -114,7 +114,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                 self.creator_parameters["fitness_name"],
                 base.Fitness,
                 weights=len(selection_weights) * (1,)
-            ) # ISSUE WITH DEAP, CAN'T USE WEIGHTS AT 0, WE APPLY THEM MANUALLY INSTEAD
+            ) # ISSUE WITH DEAP, CAN'T USE WEIGHTS AT 0, WE APPLY THEM MANUALLY INSTEAD IN FIX
         self.selection_weights = selection_weights 
 
         if self.creator_parameters["individual_name"] not in creator.__dict__:

@@ -1,8 +1,7 @@
 from copy import deepcopy
-import random
-
 from abc import abstractmethod
 
+from deap import tools
 from class_toolbox_algorithm import ToolboxAlgorithmGridWorld
 
 from environment.class_gridworld import GridWorld
@@ -26,7 +25,6 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         inner_algorithm,
         nb_generations_inner,
         population_size_inner, offspring_size_inner,
-        inner_max_steps_after_found=10,
         
         nb_instances=25,
         environment={
@@ -83,7 +81,6 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
                 offspring_size=offspring_size_inner,
                 parameters_name=inner_parameters_name,
                 ag_type=self.ag_type,
-                max_steps_after_found=inner_max_steps_after_found,
                 **toolbox_kwargs_inner
             ) for i in range(nb_instances)
         ]
@@ -91,13 +88,16 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         self.instances[0].printpop = True
         
         # Each chapter is a meta_step, inside of which each chapter is an instance
-        self.logbook.header = [
-            self.metastep_header.format(k) for k in range(self.nb_generations)
-        ]
-        for chapter in self.logbook.chapters:
-            self.logbook.chapters[chapter].header = [
-                self.instance_header.format(k) for k in nb_instances
-            ]
+        # self.inner_logbook = tools.Logbook()
+        # self.inner_logbook.header = [
+        #     self.metastep_header.format(k) for k in range(self.nb_generations)
+        # ]
+        # for chapter in self.inner_logbook.chapters:
+        #     self.inner_logbook.chapters[chapter].header = [
+        #         self.instance_header.format(k) for k in nb_instances
+        #     ]
+        #   HOTFIX : ONLY LIST OF LISTS
+        self.inner_logbook = [[None for _ in range(nb_instances)] for __ in range(nb_generations_outer+1)]
 
         self.nb_generations_inner = nb_generations_inner
         self.population_size_inner = population_size_inner
@@ -133,12 +133,13 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
                 instance.history.genealogy_tree[k+1] = tuple()
 
         # Updating the logbook
-        for i, instance in enumerate(self.instances):
-            self.logbook.chapters[
-                self.metastep_header.format(self.generation)
-            ].chapters[
-                self.instance_header.format(i)
-            ] = instance.logbook
+        # for i, instance in enumerate(self.instances):
+        #     self.inner_logbook.chapters[
+        #         self.metastep_header.format(self.generation)
+        #     ].chapters[
+        #         self.instance_header.format(i)
+        #     ] = instance.logbook
+        self.inner_logbook[self.generation] = [deepcopy(instance.logbook) for instance in self.instances]
 
         self.generation += 1
 
