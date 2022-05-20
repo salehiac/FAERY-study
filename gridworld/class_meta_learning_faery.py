@@ -45,8 +45,6 @@ class MetaLearningFAERY(MetaLearning):
         Updates the fitness of the population according to FAERY
         """
 
-        # SHUFFLING -> index overflow maybe due to genealogy index?
-
         # Updating metadata (logbook, etc...)
         population = sorted(population, key=lambda x: x.id)
 
@@ -67,7 +65,7 @@ class MetaLearningFAERY(MetaLearning):
                         depth
                     ) for parent, depth in self._find_roots(graph, solver.history_index)
                 ]
-        
+
         # Computing the scores
         id_to_population = {ag.id:ag for ag in population}
         agent_to_score = {ag:[0, 0] for ag in population}
@@ -157,11 +155,11 @@ if __name__ == "__main__":
         nb_instances=5,
 
         nb_generations_outer=5,
-        population_size_outer=10, offspring_size_outer=10,
+        population_size_outer=5, offspring_size_outer=5,
 
         inner_algorithm=QualityDiversity,
         nb_generations_inner=20,
-        population_size_inner=10, offspring_size_inner=10,
+        population_size_inner=5, offspring_size_inner=5,
 
         selection_weights=(1,1),
 
@@ -182,9 +180,9 @@ if __name__ == "__main__":
     )
 
     faery.should_show_evo_tree = False
-    pop, log, hof = faery(show_history=False)
+    pop, log, hof = faery(show_history=True)
 
-    print(faery.inner_logbook)
+    # print(faery.inner_logbook)
 
     # Showing the meta-population history
     #   We have to run them on an environment first to generate their behaviors

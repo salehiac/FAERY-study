@@ -1,3 +1,4 @@
+import time
 import torch
 import random
 import numpy as np
@@ -145,7 +146,7 @@ class GridAgentGuesser(GridAgent):
     """
 
     # __slots__ = ("grid_size", "action")
-    def __init__(self, grid_size):
+    def __init__(self, grid_size, max_mutation_amp=5):
         super().__init__()
 
         self.grid_size = grid_size
@@ -154,6 +155,8 @@ class GridAgentGuesser(GridAgent):
             random.randint(0, self.grid_size-1),
             random.randint(0, self.grid_size-1)
         ])
+
+        self.max_mutation_amp = max_mutation_amp
     
     def __call__(self, *args, **kwds):
         return self.action
@@ -164,27 +167,32 @@ class GridAgentGuesser(GridAgent):
         """
 
         mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
+        
+        # Seeding for evolvability
+        random.seed(random.seed(int(str(self.action[0]) + str(self.action[1]))))
+        amplitude = int(random.random() * self.max_mutation_amp) + 1
+
         if mutation == "LEFT":
             self.action = tuple([
                 self.action[0],
-                max(0, self.action[1] - 1)
+                max(0, self.action[1] - amplitude)
             ])
 
         elif mutation == "RIGHT":
             self.action = tuple([
                 self.action[0],
-                min(self.grid_size - 1, self.action[1] + 1)
+                min(self.grid_size - 1, self.action[1] + amplitude)
             ])
 
         elif mutation == "UP":
             self.action = tuple([
-                max(0, self.action[0] - 1),
+                max(0, self.action[0] - amplitude),
                 self.action[1]
             ])
 
         elif mutation == "DOWN":
             self.action = tuple([
-                min(self.grid_size - 1, self.action[0] + 1),
+                min(self.grid_size - 1, self.action[0] + amplitude),
                 self.action[1]
             ])
         
