@@ -164,14 +164,14 @@ if __name__ == "__main__":
     from class_quality_diversity import QualityDiversity
 
     faery = MetaLearningFAERY(
-        nb_instances=5,
+        nb_instances=25,
 
-        nb_generations_outer=20,
-        population_size_outer=5, offspring_size_outer=5,
+        nb_generations_outer=70,
+        population_size_outer=25, offspring_size_outer=25,
 
         inner_algorithm=QualityDiversity,
         nb_generations_inner=20,
-        population_size_inner=5, offspring_size_inner=5,
+        population_size_inner=25, offspring_size_inner=25,
 
         selection_weights=(1,1),
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         toolbox_kwargs_inner={
             "stop_when_solution_found":True,
             "max_steps_after_found":0,
-            "mutation_prob":.3,
+            "mutation_prob":1,
         },
 
         mutation_prob=1

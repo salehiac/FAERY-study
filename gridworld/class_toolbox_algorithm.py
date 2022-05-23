@@ -134,7 +134,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         self.toolbox.register(
             "individual",
-            parameters.generator["function"],
+            lambda  x, **kw: parameters.generator["function"](x, init_position=self.environment.reset(), **kw),
             creator.__dict__[self.creator_parameters["individual_name"]],
             **parameters.generator["parameters"]
         )
@@ -214,7 +214,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         Returns its fitness
         """
 
-        fitness, ag.done, state_hist = self.environment(ag, nb_steps=self.nb_generations)
+        fitness, ag.done, state_hist = self.environment(ag, nb_steps=1)
         if ag.done is True:
             self.done = True
             self.solvers.add(ag)   

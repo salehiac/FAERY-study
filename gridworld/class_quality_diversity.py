@@ -38,7 +38,9 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
         )
 
         self.archive = archive["type"](**archive["parameters"])
-        self.env_kd_tree = KDTree(self.environment.reward_coords)
+        
+        self.env_kd_tree = KDTree(self.environment.reward_coords) if len(self.environment.reward_coords) > 0 \
+            else None
     
     def _update_fitness(self, population):
         """
@@ -57,7 +59,8 @@ class QualityDiversity(ToolboxAlgorithmGridWorld):
             for ag in population:
                 ag.fitness.values = (
                     self.archive.get_novelty(ag.behavior)[0],
-                    self.env_kd_tree.query(ag.behavior, k=1)[0]
+                    self.env_kd_tree.query(ag.behavior, k=1)[0] if self.env_kd_tree is not None \
+                        else float("inf")
                 )
             return True
         
@@ -108,13 +111,15 @@ if __name__ == "__main__":
     if compute_Guesser is True:
       
         ns = QualityDiversity(
-            nb_generations=50,
+            nb_generations=20,
             population_size=20,
             offspring_size=20,
 
             max_steps_after_found=10,
 
             ag_type=GridAgentGuesser,
+
+            mutation_prob=1
         )
 
     pop, log, hof = ns(show_history=True, verbose=True)

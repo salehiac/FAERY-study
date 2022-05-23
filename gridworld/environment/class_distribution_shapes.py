@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from environment.class_distribution import UniformDistribution
+from environment.class_distribution import SequentialDistribution, UniformDistribution
 
 
 class UniformCircular(UniformDistribution):
@@ -107,4 +107,18 @@ class UniformHorizontalStripes(UniformDistribution):
                     (start[0] + i * (space + 1), start[1]),
                     width, 1
                 )
+            )
+
+
+class SequentialPoints(SequentialDistribution):
+    """
+    A sequential distribution of points
+    """
+
+    def __init__(self, list_points):
+        super().__init__()
+        
+        for point in list_points:
+            self.objects.append(
+                UniformRectangle(point, 1, 1)
             )

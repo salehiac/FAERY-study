@@ -146,31 +146,30 @@ class GridAgentGuesser(GridAgent):
     """
 
     # __slots__ = ("grid_size", "action")
-    def __init__(self, grid_size, max_mutation_amp=5):
+    def __init__(self, init_position, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
         super().__init__()
 
+        self.action = init_position
         self.grid_size = grid_size
-
-        self.action = tuple([
-            random.randint(0, self.grid_size-1),
-            random.randint(0, self.grid_size-1)
-        ])
-
+        
+        self.min_mutation_amp = min_mutation_amp
         self.max_mutation_amp = max_mutation_amp
     
     def __call__(self, *args, **kwds):
         return self.action
     
-    def mutate(self):
+    def mutate(self, mutation=None, amplitude=None):
         """
         A mutation is LEFT, RIGHT, UP, DOWN move
         """
 
-        mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
+        if mutation is None:
+            mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
         
         # Seeding for evolvability
-        random.seed(random.seed(int(str(self.action[0]) + str(self.action[1]))))
-        amplitude = int(random.random() * self.max_mutation_amp) + 1
+        if amplitude is None:
+            random.seed(random.seed(int(str(self.action[0]) + str(self.action[1]))))
+            amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
 
         if mutation == "LEFT":
             self.action = tuple([

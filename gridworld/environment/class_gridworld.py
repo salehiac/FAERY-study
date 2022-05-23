@@ -98,7 +98,7 @@ class GridWorld:
         Resets the environment and defines new goals aswell as a new starting position
         """
 
-        if change_goal is True:
+        if change_goal is True and len(self.distributions) > 0:
             self.reward_coords = []
             if self.goal_type == "uniform":
                 if self.nb_samples >= len(self.potential_goal_areas):

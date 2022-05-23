@@ -68,3 +68,24 @@ class UniformDistribution(Distribution):
         """
 
         return self.potential_area[random.randint(0, self.size-1)]
+
+
+class SequentialDistribution(Distribution):
+    """
+    Sequentially samples the potential area
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        self.i = -1
+    
+    def sample(self):
+        """
+        Can't pickle generator, so workaround with class' attributes
+        """
+
+        
+        self.i = 0 if self.i == len(self.potential_area) - 1 else self.i + 1
+        return self.potential_area[self.i]
+        
