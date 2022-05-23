@@ -40,20 +40,12 @@ class MetaLearningFAERY(MetaLearning):
 
         return [(k,v) for k, v in unique_nodes.items()]
 
-    def _update_fitness(self, population):
+    def _get_agent_to_depth(self, population):
         """
-        Updates the fitness of the population according to FAERY
+        Returns the agent to depth dictionnary :
+            agent:(nb of solvers born from agent, minimum depth)
         """
 
-        # Updating metadata (logbook, etc...)
-        population = sorted(population, key=lambda x: x.id)
-
-        super()._update_fitness(population)
-        for ind in population:
-            if hasattr(ind, "history_index") is False:
-                self.history.update([ind])
-
-        # For all instances, backtrack the solvers to root and retrieve their depth
         parents_and_depth = []
         for instance in self.instances:
             graph = networkx.DiGraph(instance.history.genealogy_tree)
@@ -68,28 +60,48 @@ class MetaLearningFAERY(MetaLearning):
 
         # Computing the scores
         id_to_population = {ag.id:ag for ag in population}
-        agent_to_score = {ag:[0, 0] for ag in population}
+        agent_to_depth = {ag:[0, 0] for ag in population}
 
         for parent, depth in parents_and_depth:
             agent = id_to_population[parent]
 
-            agent_to_score[agent][0] += 1
-            agent_to_score[agent][1] -= depth
+            agent_to_depth[agent][0] += 1
+            agent_to_depth[agent][1] -= depth
+        
+        return agent_to_depth
+    
+    def _update_scores(self, population):
+        """
+        Computes and updates the individuals' scores according to FAERY
+        """
 
-        # Updating the scores (couldn't do it before because deap's fitnesses are tuples)
-        for parent, depth in parents_and_depth:
-            agent = id_to_population[parent]
+        # For all instances, backtrack the solvers to root and retrieve their depth
+        agent_to_depth = self._get_agent_to_depth(population)
+
+        # Updating the scores
+        for agent in population:
+            nb_solved, depth = agent_to_depth[agent][0], agent_to_depth[agent][1]
 
             agent.fitness.values = (
-                agent_to_score[agent][0],
-                agent_to_score[agent][1] / agent_to_score[agent][0]
+                nb_solved,
+                depth / nb_solved if nb_solved != 0 else -1 * self.selection_weights[1] * float("inf")
             )
-        
-        for ag in [ind for ind in population if ind.fitness.valid is False]:
-            ag.fitness.values = (
-                0,
-                -1 * self.selection_weights[1] * float("inf")
-            )
+
+    def _update_fitness(self, population):
+        """
+        Updates the fitness of the population according to FAERY
+        """
+
+        # Updating metadata (logbook, etc...)
+        population = sorted(population, key=lambda x: x.id)
+
+        super()._update_fitness(population)
+        for ind in population:
+            if hasattr(ind, "history_index") is False:
+                self.history.update([ind])
+
+        # Updating the scores
+        self._update_scores(population)
         
         # Propagating the scores to the history tree
         for ind in population:
@@ -154,7 +166,7 @@ if __name__ == "__main__":
     faery = MetaLearningFAERY(
         nb_instances=5,
 
-        nb_generations_outer=5,
+        nb_generations_outer=20,
         population_size_outer=5, offspring_size_outer=5,
 
         inner_algorithm=QualityDiversity,
@@ -172,7 +184,7 @@ if __name__ == "__main__":
 
         toolbox_kwargs_inner={
             "stop_when_solution_found":True,
-            "max_steps_after_found":10,
+            "max_steps_after_found":0,
             "mutation_prob":.3,
         },
 
