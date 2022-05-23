@@ -91,7 +91,6 @@ class GridWorld:
         self.state_hist = []
 
         self.reward_coords = []
-        self.reset()
 
     def reset(self, change_goal=True):
         """

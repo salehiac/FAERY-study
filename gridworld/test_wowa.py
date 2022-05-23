@@ -23,7 +23,7 @@ class GridAgentFixedMutation(GridAgentGuesser):
         """
         Fixed evolvability on 3 cells
         """
-        
+
         super().mutate(
             mutation="DOWN",
             amplitude=self.mutation_dist[self.action[1]][self.nb_mutant]
@@ -45,8 +45,7 @@ ns = QualityDiversity(
     environment=GridWorld(**GridWorld12x12TestWOWA)
 )
 
-pop, log, hof = ns(show_history=True, verbose=True)
-print(log)
+pop, log, hof = ns(show_history=False, verbose=True)
 
 ns.environment.visualise_as_grid(
     list_state_hist=[[behavior] for behavior in ns.archive.behaviors],

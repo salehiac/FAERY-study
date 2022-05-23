@@ -40,5 +40,5 @@ GridWorld12x12TestWOWA = {
     "distributions":[
         # UniformHorizontalStripes((11,0), 12, 1, 1)
     ],
-    "start_distribution":SequentialPoints([(0,k) for k in range(0,12,2)])
+    "start_distribution":SequentialPoints([(0,0), (0,6), (0,11)])
 }
