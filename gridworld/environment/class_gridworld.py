@@ -91,6 +91,21 @@ class GridWorld:
         self.state_hist = []
 
         self.reward_coords = []
+    
+    def _init_position(self, start_position):
+        """
+        Initializes the environment with given position
+        """
+
+        try:
+            self.init_pos = start_position[:]
+        except IndexError:
+            raise IndexError("Starting position destroyed by walls (or of area 0 if sample)")
+
+        self.state_hist = [self.init_pos[:]] if self.is_guessing_game is False else []
+        
+        self.current_pos = self.init_pos
+        return self.init_pos
 
     def reset(self, change_goal=True):
         """
@@ -168,15 +183,7 @@ class GridWorld:
             elif self.goal_type == "all":
                 self.reward_coords = self.potential_goal_areas.copy()
 
-        try:
-            self.init_pos = self.start_distribution.sample()
-        except IndexError:
-            raise IndexError("Starting position destroyed by walls (or of area 0)")
-
-        self.state_hist = [self.init_pos[:]] if self.is_guessing_game is False else []
-        
-        self.current_pos = self.init_pos
-        return self.init_pos
+        return self._init_position(self.start_distribution.sample())
 
     def step(self, action):
         """
@@ -227,7 +234,6 @@ class GridWorld:
         else:
 
             if action not in self.empty_cells:
-                print(action)
                 raise ValueError("Guess taken in a wall")
 
             self.current_pos = action
@@ -243,6 +249,11 @@ class GridWorld:
 
         self.reset(change_goal=False)
 
+        if ag.behavior is not None:
+            self._init_position(ag.behavior)
+        else:
+            ag.update_behavior([self.init_pos])
+        
         if hasattr(ag, "eval"):  # in case of torch agent
             ag.eval()
         

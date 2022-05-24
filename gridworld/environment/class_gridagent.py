@@ -1,4 +1,5 @@
 import time
+from pygame import init
 import torch
 import random
 import numpy as np
@@ -15,7 +16,7 @@ class GridAgent:
     id = 0
     
     # __slots__ = ("state_hist", "behavior", "action")
-    def __init__(self):
+    def __init__(self, init_position=None):
         super().__init__()
 
         self.id = GridAgent.id
@@ -23,16 +24,22 @@ class GridAgent:
         
         # Behavioral descriptor of the agent
         self.state_hist = []
-        self.behavior = None
-        self.action = None
+        self.update_behavior([init_position])
+        self.action = init_position
         self.done = False
+
+        if init_position is None:
+            self.state_hist = []
+    
+    def __call__(self, *args, **kwds):
+        self.action = self.behavior
     
     def update_behavior(self, state_hist):
         """
         Updates the agent's behavior descriptor based on its trajectory
         """
 
-        self.state_hist = state_hist
+        self.state_hist += state_hist
         self.behavior = self.state_hist[-1]
         return self.behavior
     
@@ -46,6 +53,8 @@ class GridAgentNN(GridAgent, torch.nn.Module):
     def __init__(
         self,
 
+        init_position=None,
+
         input_dim=2, output_dim=2,
         hidden_layers=3, hidden_dim=10,
         use_batchnorm=False,
@@ -56,7 +65,7 @@ class GridAgentNN(GridAgent, torch.nn.Module):
         Enter NN parameters aswell as agent's lineage
         """
 
-        GridAgent.__init__(self)
+        GridAgent.__init__(self, init_position=init_position)
         torch.nn.Module.__init__(self)
 
         # Agent's network
@@ -78,6 +87,7 @@ class GridAgentNN(GridAgent, torch.nn.Module):
         x : list
         return type : tuple; numpy; torch
         """
+        GridAgent.__call__(self)
 
         self.action = torch.Tensor(x).unsqueeze(0)
         self.action = self.non_linearity(self.mds[0](self.action))
@@ -146,16 +156,17 @@ class GridAgentGuesser(GridAgent):
     """
 
     # __slots__ = ("grid_size", "action")
-    def __init__(self, init_position, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
-        super().__init__()
+    def __init__(self, init_position=None, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
+        super().__init__(init_position)
 
-        self.action = init_position
         self.grid_size = grid_size
         
         self.min_mutation_amp = min_mutation_amp
         self.max_mutation_amp = max_mutation_amp
     
     def __call__(self, *args, **kwds):
+        super().__call__()
+
         return self.action
     
     def mutate(self, mutation=None, amplitude=None):
@@ -195,15 +206,7 @@ class GridAgentGuesser(GridAgent):
                 self.action[1]
             ])
         
-    def update_behavior(self, state_hist):
-        """
-        Updates the agent's behavior descriptor based on its trajectory
-        Guesser takes one agent per game, so we're interested in its trajectory over all games
-        """
-
-        self.state_hist += state_hist
-        self.behavior = self.state_hist[-1]
-        return self.behavior
+        self.behavior = self.action
 
 
 if __name__ == "__main__":

@@ -134,7 +134,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         self.toolbox.register(
             "individual",
-            lambda  x, **kw: parameters.generator["function"](x, init_position=self.environment.reset(), **kw),
+            lambda  x, **kw: parameters.generator["function"](x, **kw),
             creator.__dict__[self.creator_parameters["individual_name"]],
             **parameters.generator["parameters"]
         )
@@ -217,7 +217,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         fitness, ag.done, state_hist = self.environment(ag, nb_steps=1)
         if ag.done is True:
             self.done = True
-            self.solvers.add(ag)   
+            self.solvers.add(ag)
 
         return fitness
     
@@ -288,7 +288,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             print("Initializing population..", end="\r")
         
         self.population = [
-            self.toolbox.individual()
+            self.toolbox.individual(init_position=self.environment.reset())
             for _ in range(self.population_size)
         ] if init_population is None else init_population
 
