@@ -104,9 +104,24 @@ if __name__ == "__main__":
         ((.05, .25, .7), "fast"),
     ]
 
+    print()
+    print("p (localization)\t\t\tw (imbalance)")
+    for p, w in zip(p_to_test, w_to_test):
+        print("\t{}: {}\t\t{}: {}".format(p[1], [round(i, 2) for i in p[0]], w[1], [round(i, 2) for i in w[0]]))
+
+    print()
+    print("a (vectors to compare)")
+    s = "\t\t\t  "
+    for k in range(len(vectors)):
+        print("\ta{}: {}".format(k, vectors[k]))
+        s+= "a{}    ".format(k)
+    print(s)
+
     for p, comp in p_to_test:
         print("p={}".format(comp))
 
         for w, comw in w_to_test:
             cap = Capacity(w)
-            print("\tw={} : \t {}".format(comw, [WOWA(w, p, v, cap) for v in vectors]))
+            print("\tw={} : \t {}".format(comw, [round(WOWA(w, p, v, cap),1) for v in vectors]))
+
+    print()

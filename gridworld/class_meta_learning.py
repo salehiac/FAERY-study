@@ -72,6 +72,7 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         else:
             environments = init_environments[:]
         self.model_environment = deepcopy(environments[0])
+        self.environment = self.model_environment
 
         self.instances = [
             inner_algorithm(
@@ -96,7 +97,7 @@ class MetaLearning(ToolboxAlgorithmGridWorld):
         #     self.inner_logbook.chapters[chapter].header = [
         #         self.instance_header.format(k) for k in nb_instances
         #     ]
-        #   HOTFIX : ONLY LIST OF LISTS
+        #   HOTFIX : ONLY LIST OF LISTS OF LOGBOOKS
         self.inner_logbook = [[None for _ in range(nb_instances)] for __ in range(nb_generations_outer+1)]
 
         self.nb_generations_inner = nb_generations_inner

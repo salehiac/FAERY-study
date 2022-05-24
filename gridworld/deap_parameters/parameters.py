@@ -102,7 +102,7 @@ class ParametersGuesser(ParametersCommon):
     generator={
         "function":lambda x, **kw: x(**kw),
         "parameters":{
-            "grid_size":40
+            "grid_size":19
         }
     }
 

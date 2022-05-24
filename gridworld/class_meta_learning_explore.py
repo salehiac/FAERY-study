@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from class_meta_learning_faery import MetaLearningFAERY
-from utils_explore import build_capacity, WOWA
+from utils_explore import Capacity, WOWA
 
 
 class MetaLearningExplore(MetaLearningFAERY):
@@ -19,11 +19,10 @@ class MetaLearningExplore(MetaLearningFAERY):
         F0 is replaced with a WOWA on the distance travelled by a meta-individual's offspring
     """
 
-    def __init__(self, *args, w, p, ndigits=18, traj_length=3, should_show_evo_tree=False, **kwargs):
+    def __init__(self, *args, w, p, traj_length=3, should_show_evo_tree=False, **kwargs):
         """
         w : weights for OWA, caracterizes the imbalance
         p : weights for WOWA, localizes the imbalance
-        ndigits : precision for WOWA
         traj_length : length of the paths to consider (zero-padded if too short)
         """
 
@@ -31,9 +30,9 @@ class MetaLearningExplore(MetaLearningFAERY):
 
         self.w = w
         self.p = p
-        self.phi = build_capacity(w, p, ndigits=ndigits)
+        self.phi = Capacity(w)
 
-        self.traj_length = traj_length + 1
+        self.traj_length = traj_length
     
     def _get_path(self, graph, node, max_length):
         """
@@ -130,7 +129,6 @@ class MetaLearningExplore(MetaLearningFAERY):
         # Updating the scores
         for i, agent in enumerate(population):
             nb_solved, depth = agent_to_depth[agent][0], agent_to_depth[agent][1]
-
             agent.fitness.values = (
                 WOWA(self.w, self.p, avg_movement[i], self.phi),
                 depth / nb_solved if nb_solved != 0 else -1 * self.selection_weights[1] * float("inf")
@@ -154,8 +152,8 @@ if __name__ == "__main__":
 
         selection_weights=(1,1),
 
-        w = [3/6, 2/6, 1/6],
-        p = [3/6, 1/6, 2/6],
+        w = (.05, .25, .7),
+        p = (4/6, 3/12, 1/12),
 
         ag_type=GridAgentGuesser,
 

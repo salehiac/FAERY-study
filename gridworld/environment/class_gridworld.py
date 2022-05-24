@@ -105,6 +105,7 @@ class GridWorld:
         self.state_hist = [self.init_pos[:]] if self.is_guessing_game is False else []
         
         self.current_pos = self.init_pos
+
         return self.init_pos
 
     def reset(self, change_goal=True):
@@ -234,7 +235,7 @@ class GridWorld:
         else:
 
             if action not in self.empty_cells:
-                raise ValueError("Guess taken in a wall")
+                raise ValueError("Guess {} taken in a wall".format(action))
 
             self.current_pos = action
             done = self.current_pos in self.reward_coords
