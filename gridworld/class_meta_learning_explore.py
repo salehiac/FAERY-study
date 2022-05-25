@@ -33,7 +33,7 @@ class MetaLearningExplore(MetaLearningFAERY):
         self.phi = Capacity(w)
 
         self.traj_length = traj_length
-    
+
     def _get_path(self, graph, node, max_length):
         """
         Returns all paths  of length max_length starting from node
@@ -94,12 +94,10 @@ class MetaLearningExplore(MetaLearningFAERY):
 
         # Computing average acceleration and average distance
         avg_dist = np.mean(avg_mov)
+        avg_dist_tab = np.mean(avg_mov, axis=0)
 
         avg_accel = [
-            sum([
-                avg_mov[j][l+1] - avg_mov[j][l]
-                for j in range(len(population))
-            ]) / len(population)
+            avg_dist_tab[l+1] - avg_dist_tab[l]
             for l in range(self.traj_length-1)
         ]
 
@@ -108,11 +106,11 @@ class MetaLearningExplore(MetaLearningFAERY):
             if depth == -1:
                 avg_mov[i][0] = avg_dist
                 for j in range(self.traj_length-1):
-                    avg_mov[i][j+1] = avg_mov[i][j] + avg_accel[j]
+                    avg_mov[i][j+1] = abs(avg_mov[i][j] + avg_accel[j])
 
             elif depth < self.traj_length:
                 for j in range(depth + 1, self.traj_length):
-                    avg_mov[i][j] = avg_mov[i][j-1] + avg_accel[j-1]
+                    avg_mov[i][j] = abs(avg_mov[i][j-1] + avg_accel[j-1])
 
         return avg_mov
     

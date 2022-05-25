@@ -1,7 +1,7 @@
 import bisect
-from os import environ
 import matplotlib.pyplot as plt
 
+from itertools import cycle
 from copy import deepcopy
 from class_novelty_archive import NoveltyArchive
 from class_quality_diversity import QualityDiversity
@@ -17,7 +17,8 @@ class GridAgentFixedMutation(GridAgentGuesser):
     Agent with fixed evolvability on 3 cells
     """
 
-    checkpoints = [0, 6, 12]
+    size = 19
+    checkpoints = [k for k in range(0,size, size//3)]
 
     mutation_dist = {
         checkpoints[0]:(6, 6, 6),
@@ -25,8 +26,16 @@ class GridAgentFixedMutation(GridAgentGuesser):
         checkpoints[2]:(3, 6, 9)
     }
 
+    max_step = len(mutation_dist[checkpoints[0]])
+
     def __init__(self, init_position=None, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
         super().__init__(init_position, min_mutation_amp, max_mutation_amp, grid_size)
+
+        self.my_pattern = self.mutation_dist[
+            self.checkpoints[max(bisect.bisect_left(self.checkpoints, self.action[1])-1, 0)]
+        ]
+        self.my_pattern += self.my_pattern[::-1]
+        self.my_pattern = cycle(self.my_pattern)
 
         self.nb_mutant = 0
     
@@ -35,14 +44,9 @@ class GridAgentFixedMutation(GridAgentGuesser):
         Fixed evolvability on 3 cells
         """
 
-        if self.nb_mutant >= len(list(self.mutation_dist.values())[0]):
-            self.nb_mutant -= 1
-
         super().mutate(
-            mutation="DOWN",
-            amplitude=self.mutation_dist[
-                self.checkpoints[max(bisect.bisect_left(self.checkpoints, self.action[1])-1, 0)]
-            ][self.nb_mutant]
+            mutation="DOWN" if (self.nb_mutant // self.max_step) % 2 == 0 else "UP",
+            amplitude=next(self.my_pattern)
         )
         
         self.nb_mutant += 1
@@ -80,15 +84,7 @@ class UselessAlgo(QualityDiversity):
                     ag.nb_mutant,
                     0
                 )
-            return True
-        
-        for ag in [ind for ind in population if ind.fitness.valid is False]:
-            ag.fitness.values = (
-                0,
-                0
-            )
-
-        return False
+        return True
 
         
 if __name__ == "__main__":
@@ -150,18 +146,20 @@ if __name__ == "__main__":
 # EXPLORE
     
     faery = MetaLearningExplore(
-        nb_instances=5,
+        nb_instances=1,
 
         nb_generations_outer=10,
-        population_size_outer=19, offspring_size_outer=25,
+        population_size_outer=19, offspring_size_outer=19,
 
         inner_algorithm=UselessAlgo,
-        nb_generations_inner=4,
-        population_size_inner=19, offspring_size_inner=25,
+        nb_generations_inner=2,
+        population_size_inner=19, offspring_size_inner=19,
 
         selection_weights=(1,1),
 
-        w = (1,0,0),
+        # w = (.85,.13,.02),
+        w = (0,0,0),
+        # w = (.7, .25, .05),
         p = (1/3, 1/3, 1/3),
 
         ag_type=GridAgentFixedMutation,
@@ -177,7 +175,7 @@ if __name__ == "__main__":
             "mutation_prob":1,
         },
 
-        mutation_prob=1,
+        mutation_prob=0,
         environment={
             "type":GridWorld,
             "parameters":{
@@ -188,7 +186,7 @@ if __name__ == "__main__":
     )
 
     faery.should_show_evo_tree = False
-    pop, log, hof = faery(show_history=True)
+    pop, log, hof = faery(show_history=False)
 
     # Showing the meta-population history
     #   We have to run them on an environment first to generate their behaviors

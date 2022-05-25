@@ -277,7 +277,6 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
 
         return offspring
 
-
     def __call__(self, init_population=None, verbose=True, show_history=False):
         """
         Runs the algorithm
@@ -312,6 +311,10 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
                     self.toolbox.clone,
                     self.population
             )))
+            # offspring += [
+            #     self.toolbox.individual(init_position=self.environment.reset())
+            #     for _ in range(max(0, self.offspring_size - self.population_size))
+            # ]
 
             # Evaluate the offspring
             self._update_fitness(offspring)
