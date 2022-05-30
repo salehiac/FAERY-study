@@ -1,4 +1,5 @@
 import bisect
+import numpy as np
 
 
 class Capacity:
@@ -13,9 +14,13 @@ class Capacity:
         Returns the neighbours of x in A
         """
 
+        x = max(0, x)
+        x = min(1, x)
+
         cA = sorted(list(A))
 
         i = bisect.bisect_left(cA,x)
+
         return cA[i-1], cA[i]
     
     def interpolate(self, newp):
@@ -69,6 +74,20 @@ def WOWA(w, p, a, phi=None):
         s += (sa[i] - sa[i-1]) * phi(sum([p[k] for k in si[i:]]))
     
     return s
+
+
+def interpolate_weights(w, N):
+    """
+    Returns a N sized vector whose values are interpolated linearly with w
+    """
+    
+    inter = np.interp(
+        np.linspace(0, 1, N),
+        np.linspace(0, 1, len(w)),
+        w
+    )
+
+    return list(inter/np.sum(inter))
 
 
 if __name__ == "__main__":

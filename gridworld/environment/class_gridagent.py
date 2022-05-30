@@ -169,6 +169,24 @@ class GridAgentGuesser(GridAgent):
 
         return self.action
     
+    def _make_amplitude(self, input_position=None):
+        """
+        Gives an amplitude to the agent's mutation
+        """
+
+        if input_position is None:
+            input_position = self.action[:]
+
+        # random.seed(random.seed(int(str(input_position[0]) + str(input_position[1]))))
+        # amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
+
+        # RAPID TEST
+        # amplitude = input_position[0]//10 + 1
+        # amplitude = input_position[1]//10 + 1
+        amplitude = sum(input_position) // 10 + 1
+
+        return amplitude
+    
     def mutate(self, mutation=None, amplitude=None):
         """
         A mutation is LEFT, RIGHT, UP, DOWN move
@@ -179,9 +197,8 @@ class GridAgentGuesser(GridAgent):
         
         # Seeding for evolvability
         if amplitude is None:
-            random.seed(random.seed(int(str(self.action[0]) + str(self.action[1]))))
-            amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
-
+            amplitude = self._make_amplitude()
+            
         if mutation == "LEFT":
             self.action = tuple([
                 self.action[0],

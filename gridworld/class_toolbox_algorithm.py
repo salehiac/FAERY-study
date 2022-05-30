@@ -356,21 +356,29 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
             
         return self.population, self.logbook, self.hall_of_fame
     
-    def show_history(self):
+    def show_history(self, axs=None, index_to_show=None, show=True):
         """
         Shows the history tree generated during execution
         """
+
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(self.selection_weights))
+        if index_to_show is None:
+            index_to_show = range(len(self.selection_weights)) 
 
         graph = networkx.DiGraph(self.history.genealogy_tree)
         graph = graph.reverse()     # Make the graph top-down
 
         pos = graphviz_layout(graph, prog="dot")
-        for k in range(len(self.selection_weights)):
-            plt.figure()
-            plt.title("Evolutionary tree, F{}".format(k))
+        for k in index_to_show:
+            axs[k].set_title("Evolutionary tree, F{}".format(k))
             colors = [self.history.genealogy_history[i].fitness.values[k] for i in graph]
-            networkx.draw(graph, pos, node_color=colors)
-        plt.show()
+            networkx.draw(graph, pos, node_color=colors, ax=axs[k])
+
+        if show is True:
+            plt.show()
+        
+        return axs
 
     def reset(self):
         """
@@ -448,3 +456,11 @@ class ToolboxAlgorithmGridWorld(ToolboxAlgorithm):
         super().reset()
         self.environment.reset(change_goal=True)
     
+    def probe_evolvability(self):
+        """
+        Returns a list of the map's evolvability
+        """
+
+        to_iter = list(range(self.environment.size))
+        tmp_agent = self.toolbox.individual()
+        return [[tmp_agent._make_amplitude(input_position=(x,y)) for y in to_iter] for x in to_iter]

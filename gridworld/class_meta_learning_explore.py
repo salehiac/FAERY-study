@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from class_meta_learning_faery import MetaLearningFAERY
-from utils_explore import Capacity, WOWA
+from utils_explore import Capacity, WOWA, interpolate_weights
 
 
 class MetaLearningExplore(MetaLearningFAERY):
@@ -137,21 +137,31 @@ if __name__ == "__main__":
 
     from environment.class_gridagent import GridAgentNN, GridAgentGuesser
     from class_quality_diversity import QualityDiversity
+    
+    from environment.class_gridworld import GridWorld
+    from environment.utils_worlds import GridWorld19x19TestWOWA
 
     faery = MetaLearningExplore(
-        nb_instances=25,
+        nb_instances=5,
 
-        nb_generations_outer=70,
-        population_size_outer=25, offspring_size_outer=25,
+        nb_generations_outer=10,
+        population_size_outer=20, offspring_size_outer=20,
 
         inner_algorithm=QualityDiversity,
-        nb_generations_inner=20,
-        population_size_inner=25, offspring_size_inner=25,
+        nb_generations_inner=10,
+        population_size_inner=20, offspring_size_inner=20,
 
         selection_weights=(1,1),
 
-        w = (.05, .25, .7),
-        p = (4/6, 3/12, 1/12),
+        traj_length = 10,
+        # Uniform
+        w = interpolate_weights((.7, .16, .14), 10),
+        # # Fast
+        # w = interpolate_weights((.14, .16, .7), 10),
+        # # Slow
+        # w = interpolate_weights((.9, .08, .02), 10),
+
+        p = interpolate_weights((4/6, 3/12, 1/12), 10),
 
         ag_type=GridAgentGuesser,
 
@@ -163,14 +173,22 @@ if __name__ == "__main__":
         toolbox_kwargs_inner={
             "stop_when_solution_found":True,
             "max_steps_after_found":0,
-            "mutation_prob":.3,
+            "mutation_prob":1,
+        },
+
+        environment={
+            "type":GridWorld,
+            "parameters":{
+                "is_guessing_game":True,
+                **GridWorld19x19TestWOWA
+            }
         },
 
         mutation_prob=1
     )
 
     faery.should_show_evo_tree = False
-    pop, log, hof = faery(show_history=True)
+    pop, log, hof = faery()
 
     # print(faery.inner_logbook)
 
@@ -204,8 +222,11 @@ if __name__ == "__main__":
         show=False
     )
 
-    fig, axs = plt.subplots(ncols=2)
-    axs[0].imshow(grid_hist)
-    axs[1].imshow(grid_final)
+    faery.show_history(show=False)
+
+    fig, axs = plt.subplots(ncols=3)
+    axs[0].imshow(faery.probe_evolvability())
+    axs[1].imshow(grid_hist)
+    axs[2].imshow(grid_final)
 
     plt.show()

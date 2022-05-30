@@ -36,8 +36,8 @@ GridWorld40x40Circles = {
 }
 
 GridWorld19x19TestWOWA = {
-    "size":19,
+    "size":20,
     "distributions":[
     ],
-    "start_distribution":SequentialPoints([(0,k) for k in range(19)])
+    "start_distribution":SequentialPoints([(0,k) for k in range(20)])
 }
