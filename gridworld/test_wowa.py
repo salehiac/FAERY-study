@@ -11,6 +11,7 @@ from environment.class_gridagent import GridAgentGuesser
 from utils_explore import interpolate_weights
 
 
+### COMMON PARAMETERS
 traj_length = 10
 
 w_to_test = [
@@ -42,8 +43,32 @@ explore_kwargs = {
         }
     },
 }
+###
 
+### CHANGE THE MAP'S EVOLVABILITY
+class GridAgentGuesserNewEvolve(GridAgentGuesser):
+    def __init__(self, init_position=None, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
+        super().__init__(init_position, min_mutation_amp, max_mutation_amp, grid_size)
+    
+    def _make_amplitude(self, input_position=None):
 
+        if input_position is None:
+            input_position = self.action[:]
+
+        # HORIZONTAL
+        # amplitude = input_position[0]//10 + 1
+        # VERTICAL
+        # amplitude = input_position[1]//10 + 1
+        # DIAGONAL
+        # amplitude = sum(input_position) // 10 + 1
+        # BAND
+        spos = sum(input_position)
+        amplitude = (spos // 5 + 1) if spos <= 20 else (4 - (spos-20) // 5)
+
+        return amplitude
+###
+
+### RUN EXAMPLES
 base_size = 3
 for p, plabel in p_to_test:
 
@@ -64,7 +89,7 @@ for p, plabel in p_to_test:
             # Outer mutations
             mutation_prob=1,
 
-            ag_type=GridAgentGuesser,
+            ag_type=GridAgentGuesserNewEvolve,
             toolbox_kwargs_inner={
                 "stop_when_solution_found":True,
                 "max_steps_after_found":0,
@@ -125,4 +150,6 @@ for p, plabel in p_to_test:
 
         faery.show_history(show=False, axs=[axs[i][2]], index_to_show=[0])
 
+fig, ax = plt.subplots()
+ax.imshow(faery.probe_evolvability())
 plt.show()

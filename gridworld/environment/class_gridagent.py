@@ -177,13 +177,13 @@ class GridAgentGuesser(GridAgent):
         if input_position is None:
             input_position = self.action[:]
 
-        # random.seed(random.seed(int(str(input_position[0]) + str(input_position[1]))))
-        # amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
+        random.seed(random.seed(int(str(input_position[0]) + str(input_position[1]))))
+        amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
 
         # RAPID TEST
         # amplitude = input_position[0]//10 + 1
         # amplitude = input_position[1]//10 + 1
-        amplitude = sum(input_position) // 10 + 1
+        # amplitude = sum(input_position) // 10 + 1
 
         return amplitude
     
