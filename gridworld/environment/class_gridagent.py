@@ -1,8 +1,8 @@
-import time
-from pygame import init
 import torch
 import random
 import numpy as np
+
+from perlin_noise import PerlinNoise
 
 
 # use __slots__
@@ -155,14 +155,32 @@ class GridAgentGuesser(GridAgent):
     with special mutation operator
     """
 
+    direction_list = ["LEFT", "RIGHT", "UP", "DOWN"]
+    evo_map = None
+
     # __slots__ = ("grid_size", "action")
-    def __init__(self, init_position=None, min_mutation_amp=1, max_mutation_amp=5, grid_size=40):
+    def __init__(
+        self,
+        init_position=None,
+        min_mutation_amp=1,
+        max_mutation_amp=5,
+        grid_size=40,
+        evolvability={
+            "type":"perlin",
+            "parameters":{
+                "octaves":4,
+                "seed":3
+            }
+        }):
+
         super().__init__(init_position)
 
         self.grid_size = grid_size
         
         self.min_mutation_amp = min_mutation_amp
         self.max_mutation_amp = max_mutation_amp
+
+        self.evolvability = evolvability
     
     def __call__(self, *args, **kwds):
         super().__call__()
@@ -172,18 +190,45 @@ class GridAgentGuesser(GridAgent):
     def _make_amplitude(self, input_position=None):
         """
         Gives an amplitude to the agent's mutation
+
+        Not very efficient to have it here rather than on the map.... fixed by using class's evo_map
         """
 
         if input_position is None:
-            input_position = self.action[:]
+            input_position = list(map(int,self.action[:]))
 
-        random.seed(random.seed(int(str(input_position[0]) + str(input_position[1]))))
-        amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
+        if self.evolvability["type"] == "horizontal":
+            amplitude = input_position[0]//10 + 1
+        elif self.evolvability["type"] == "vertical":
+            amplitude = input_position[1]//10 + 1
+        elif self.evolvability["type"] == "diagonal":
+            amplitude = sum(input_position) // 10 + 1
+        elif self.evolvability["type"] == "band":
+            spos = sum(input_position)
+            amplitude = (spos // 5 + 1) if spos <= 20 else (4 - (spos-20) // 5)
+        elif self.evolvability["type"] == "perlin":
+            params = self.evolvability["parameters"]
 
-        # RAPID TEST
-        # amplitude = input_position[0]//10 + 1
-        # amplitude = input_position[1]//10 + 1
-        # amplitude = sum(input_position) // 10 + 1
+            if GridAgentGuesser.evo_map is None:            
+                noise = PerlinNoise(**params)
+                GridAgentGuesser.evo_map = np.array([
+                    [
+                        noise((i/self.grid_size, j/self.grid_size))
+                        for j in range(self.grid_size)
+                    ] for i in range(self.grid_size)
+                ])
+
+                GridAgentGuesser.evo_map = np.tanh(self.evo_map/np.max(abs(self.evo_map)))
+
+                GridAgentGuesser.evo_map = np.round((self.evo_map + np.tanh(.5)) * (self.max_mutation_amp - self.min_mutation_amp) + self.min_mutation_amp)
+            
+            amplitude = int(np.clip(self.evo_map[input_position[0], input_position[1]], self.min_mutation_amp, self.max_mutation_amp))
+            
+            assert amplitude >= self.min_mutation_amp and amplitude <= self.max_mutation_amp, "amplitude {} out of bounds".format(amplitude)
+
+        else:
+            random.seed(int(str(input_position[0]) + str(input_position[1])))
+            amplitude = random.randint(self.min_mutation_amp, self.max_mutation_amp)
 
         return amplitude
     
@@ -193,7 +238,7 @@ class GridAgentGuesser(GridAgent):
         """
 
         if mutation is None:
-            mutation = random.choice(["LEFT", "RIGHT", "UP", "DOWN"])
+            mutation = random.choice(self.direction_list)
         
         # Seeding for evolvability
         if amplitude is None:

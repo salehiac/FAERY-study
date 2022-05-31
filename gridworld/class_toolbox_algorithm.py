@@ -67,6 +67,7 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         cross_over_prob=.3, mutation_prob=.1,
         
         parameters_name=("./deap_parameters/parameters.py", "parameters"),
+        agent_evolvability=None,
 
         multiprocessing = False
         
@@ -88,6 +89,8 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         
         parameters_name : tuple containing the name of the module and class that should be loaded
             for the algorithm's generator, mutator and breeder
+
+        agent_evolvability : type of evolvability to sample, dict with "type":type and "parameters":"seed",others...
 
         multiprocessing : if True uses scoop, else uses deap's default map
             /!\ work in progress
@@ -131,6 +134,9 @@ class ToolboxAlgorithm(metaclass=ToolboxAlgorithmFix):
         parameters = foo.ParametersGuesser()
 
         self.toolbox = base.Toolbox()
+
+        if agent_evolvability is not None:
+            parameters.generator["parameters"]["evolvability"] = agent_evolvability
 
         self.toolbox.register(
             "individual",
