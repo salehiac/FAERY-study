@@ -157,8 +157,7 @@ class ForSparseRewards(ABC):
             sampler = self.test_sampler
             nb_samples = self.num_test_samples
 
-        metadata =
-
+        # FOR DEBUGING PURPOSES
         # metadata = ns_instance(
         #     sampler,  # sampler
         #     [x for x in pop],  # population
@@ -170,6 +169,20 @@ class ForSparseRewards(ABC):
         #     (type_run, outer_g)
         # )
         
+        metadata = list(
+            futures.map(
+                ns_instance,
+                [sampler for _ in range(nb_samples)],  # sampler
+                [[x for x in pop] for _ in range(nb_samples)],  # population
+                [self.mutator for _ in range(nb_samples)],  # mutator
+                [self.inner_selector for _ in range(nb_samples)],  # inner_selector
+                [self.agent_factory for _ in range(nb_samples)],  # make_ag
+                [self.G_inner for _ in range(nb_samples)],    # G_inner
+                [self.top_level_log for _ in range(nb_samples)],
+                [(type_run, outer_g) for _ in range(nb_samples)]
+            )
+        )
+
         return metadata
     
     @abstractmethod
@@ -185,26 +198,30 @@ class ForSparseRewards(ABC):
         Updates the evolution table
         """
 
-        if tmp_pop is not None:
-            idx_to_individual = {x._idx: x for x in tmp_pop}
+        assert tmp_pop is not None, "tmp_pop should not be None"
+
+        idx_to_individual = {x._idx: x for x in tmp_pop}
         
-        nb_samples = self.num_train_samples if type_run=="train" else self.num_test_samples
-        for pb_i in range(nb_samples):
-            rt_i = metadata[pb_i][0]  # roots
-            d_i = metadata[pb_i][1]  # depths
+        for instance, (parents, solutions) in enumerate(metadata):
 
-            for rt in rt_i:
-                if tmp_pop is not None:
-                    idx_to_individual[rt]._useful_evolvability += 1
-                    idx_to_individual[rt]._adaptation_speed_lst.append(d_i)
+            root_to_solvers, solver_to_depth = {}, {}
+            for iteration, list_solutions in solutions.items():
+                for solver in list_solutions:
+                    if solver._root not in root_to_solvers:
+                        root_to_solvers[solver._root] = [solver]
+                    elif solver not in root_to_solvers[solver._root]:
+                        root_to_solvers[solver._root].append(solver)
+                    
+                    if solver not in solver_to_depth:
+                        solver_to_depth[solver] = iteration
+            
+            for root in root_to_solvers:
+                root_ind, solvers = idx_to_individual[root], root_to_solvers[root]
+                root_ind._useful_evolvability = len(solvers)
+                root_ind._adaptation_speed_lst = [solver_to_depth[solver] for solver in solvers]
+                root_ind._mean_adaptation_speed = np.mean(root_ind._adaptation_speed_lst)
 
-                evolution_table[idx_to_row[rt], pb_i] = d_i
-
-        if tmp_pop is not None:
-            for ind in tmp_pop:
-                if len(ind._adaptation_speed_lst):
-                    ind._mean_adaptation_speed = np.mean(
-                        ind._adaptation_speed_lst)
+                evolution_table[idx_to_row[root], instance] = np.min(root_ind._adaptation_speed_lst)
 
     def _save_evolution_table(self, evolution_table, type_save, current_index):
         """
@@ -216,9 +233,12 @@ class ForSparseRewards(ABC):
         evolution_tables.append(evolution_table)
 
         np.savez_compressed(
-            self.top_level_log + "/evolution_table_{}_".format(type_save) +
-            str(current_index + self.starting_gen),
-            evolution_table)
+                "{}/evolution_table_{}_{}".format(
+                    self.top_level_log, type_save,
+                    str(current_index + self.starting_gen)
+                ),
+                evolution_table
+        )
     
     def _make_evolution_table(self, metadata, tmp_pop, current_index, type_run="train", save=True):
         """
@@ -258,7 +278,7 @@ class ForSparseRewards(ABC):
 
             if not test_first:
 
-                # [roots, depths, populations]
+                # [parents, soltuions per step]
                 metadata = self._get_metadata(tmp_pop, "train", outer_g)
 
                 # Updating the evolution table and the individuals
@@ -267,11 +287,15 @@ class ForSparseRewards(ABC):
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
 
-                if save is True:
-                    with open(
-                            self.top_level_log + "/population_prior_" +
-                            str(outer_g + self.starting_gen), "wb") as fl:
-                        pickle.dump(self.pop, fl)
+                # if save is True:
+                #     with open(
+                #         "{}/population_prior_{}".format(
+                #             self.top_level_log,
+                #             str(outer_g + self.starting_gen)
+                #         ),
+                #         "wb"
+                #     ) as fl:
+                #         pickle.dump(self.pop, fl)
 
                 # reset evolvability and adaptation stats
                 for ind in self.pop:

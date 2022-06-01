@@ -52,7 +52,7 @@ class Agent(ABC):
         self._bd_dist_to_parent_bd = -1
         self._age = -1
 
-        # only useful for meta-learning with MetaQDForSparseRewards
+        # only useful for meta-learning with FAERY
         self._useful_evolvability = 0
         self._mean_adaptation_speed = float("inf")
         self._adaptation_speed_lst = []

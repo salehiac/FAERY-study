@@ -64,17 +64,18 @@ class ListArchive(Archive):
 
         pop = parents + offspring
         if self.growth_strategy == "random":
-            r = random.sample(range(len(pop)), self.growth_rate)
-            candidates = [pop[i] for i in r[:self.growth_rate]]
+            candidates = [
+                pop[i]
+                for i in random.sample(range(len(pop)), self.growth_rate)
+            ]
         elif self.growth_strategy == "most_novel":
             sorted_pop = sorted(pop,
                                 key=lambda x: x._nov)[::-1]  # descending order
             candidates = sorted_pop[:self.growth_rate]
 
-        candidates = [c for c in candidates if c._nov > thresh]
-        self.container += candidates
+        self.container += [c for c in candidates if c._nov > thresh]
 
-        if len(self) >= self.max_size:
+        if len(self.container) >= self.max_size:
             self.manage_size(
                 boundaries,
                 parents=np.concatenate([x._behavior_descr for x in parents],
@@ -83,8 +84,10 @@ class ListArchive(Archive):
 
     def manage_size(self, boundaries=[], parents=[], knn_k=-1):
         if self.removal_strategy == "random":
-            r = random.sample(range(len(self)), k=self.max_size)
-            self.container = [self.container[i] for i in r]
+            self.container = [
+                self.container[i]
+                for i in random.sample(range(len(self)), k=self.max_size)
+            ]
         else:
             raise NotImplementedError("manag_size")
 

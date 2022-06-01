@@ -51,7 +51,7 @@ def get_evolution(path, name, start, end, prefix="train"):
     # Average minimum adaptations to solve a task
     list_avg_adapt, list_std_adapt = [], []
 
-    for filename in [path+name+"/evolution_table_{}_{}.npz".format(prefix,i) for i in range(start, end+1)]:
+    for filename in ["{}/evolution_table_{}_{}.npz".format(path+name,prefix,i) for i in range(start, end+1)]:
 
         arr = read_file(filename, prefix=prefix)
         if arr is None:
@@ -86,7 +86,7 @@ def get_score(path, name, start, end):
     list_mean_std_0 = [[], []]
     list_mean_std_1 = [[], []]
     list_solved_one_task = []
-    for filename in [path+name+"/meta-scores_train_{}.npz".format(i) for i in range(start, end+1)]:
+    for filename in ["{}/meta-scores_train_{}.npz".format(path+name,i) for i in range(start, end+1)]:
 
         arr = read_file(filename)
         init_len = len(arr)

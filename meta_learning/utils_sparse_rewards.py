@@ -89,8 +89,7 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
         n_offspring=offsprings_size,
         agent_factory=make_ag,
         map_type="scoop",  # or "std"
-        compute_parent_child_stats=0,
-        initial_pop=[x for x in population],
+        initial_pop=[copy.deepcopy(x) for x in population],
         problem_sampler=sampler,
         top_level_log=top_level_log,
         prefix_tuple=prefix_tuple)
@@ -99,19 +98,7 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
     nov_estimator.log_dir = ns.log_dir_path
     ns.disable_tqdm = True
     ns.save_archive_to_file = False
-    parents, solutions = ns(
+    return ns(
         iters=G_inner,
         stop_on_reaching_task=True,  # should not be False in the current implementation)
-        save_checkpoints=0
-    )  # save_checkpoints is not implemented but other functions already do its job
-
-    if not len(solutions.keys()):  # environment wasn't solved
-        return [], -1, parents
-
-    assert len(solutions.keys()) == 1, \
-         "solutions should only contain solutions from a single generation"
-    depth = list(solutions.keys())[0]
-
-    roots = [sol._root for sol in solutions[depth]]
-
-    return roots, depth, parents
+    )

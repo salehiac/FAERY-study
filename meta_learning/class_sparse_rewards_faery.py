@@ -79,8 +79,10 @@ class FAERY(ForSparseRewards):
         """
 
         np.savez_compressed(
-            "{}/meta-scores_{}_{}".format(self.top_level_log, type_run,
-                                          str(current_index + self.starting_gen)),
+            "{}/meta-scores_{}_{}".format(
+                self.top_level_log, type_run,
+                str(current_index + self.starting_gen)
+            ),
             np.array([self._get_meta_objectives(ind) for ind in tmp_pop])
         )
 

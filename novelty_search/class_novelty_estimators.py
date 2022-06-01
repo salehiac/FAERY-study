@@ -57,16 +57,15 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         self.archive = archive
         self.pop = pop
 
-        self.pop_bds = [x._behavior_descr for x in self.pop]
-        self.pop_bds = np.concatenate(self.pop_bds, 0)
+        self.pop_bds = np.concatenate([x._behavior_descr for x in self.pop], 0)
         self.archive_bds = [x._behavior_descr for x in self.archive]
 
         if len(self.archive_bds):
             self.archive_bds = np.concatenate(self.archive_bds, 0)
+            self.kdt_bds = np.concatenate([self.archive_bds, self.pop_bds], 0)
+        else:
+            self.kdt_bds = self.pop_bds
 
-        self.kdt_bds = np.concatenate([self.archive_bds, self.pop_bds],
-                                      0) if len(
-                                          self.archive_bds) else self.pop_bds
         self.kdt = KDTree(self.kdt_bds, leaf_size=20, metric='euclidean')
 
     def __call__(self):
@@ -117,17 +116,17 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.log_dir = log_dir
 
         if pb_limits is not None:
-            utils_misc.make_networks_divergent(self.frozen,
-                                              self.learnt,
-                                              pb_limits,
-                                              iters=50)
+            utils_misc.make_networks_divergent(
+                self.frozen,
+                self.learnt,
+                pb_limits,
+                iters=50
+            )
 
     def update(self, pop, archive=None):
 
         self.pop = pop
-
-        self.pop_bds = [x._behavior_descr for x in self.pop]
-        self.pop_bds = np.concatenate(self.pop_bds, 0)
+        self.pop_bds = np.concatenate([x._behavior_descr for x in self.pop], 0)
 
     def __call__(self):
 
