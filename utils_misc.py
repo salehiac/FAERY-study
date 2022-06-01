@@ -221,24 +221,18 @@ class NSGA2:
 
         self.k = k
 
-    def __call__(self, individuals, automatic_threshold=False):
-        individual_novs = [x._nov for x in individuals]
-        if automatic_threshold:
-            md = np.median(individual_novs)
-            individual_novs = list(
-                map(lambda x: x if x > md else 0, individual_novs))
+    def __call__(self, individuals):
 
         light_pop = []
-        for i in range(len(individuals)):
+        for i, individual in enumerate(individuals):
             light_pop.append(deap.creator.LightIndividuals())
-            light_pop[-1].fitness.setValues(
-                [individuals[i]._fitness, individual_novs[i]])
+            light_pop[-1].fitness.setValues([individual._fitness, individual._nov])
             light_pop[-1].ind_i = i
 
-        chosen = deap.tools.selNSGA2(light_pop, self.k, nd="standard")
-        chosen_inds = [x.ind_i for x in chosen]
-
-        return [individuals[u] for u in chosen_inds]
+        return list(map(
+            lambda x: individuals[x.ind_i],
+            deap.tools.selNSGA2(light_pop, self.k, nd="standard")
+        ))
 
 
 def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):

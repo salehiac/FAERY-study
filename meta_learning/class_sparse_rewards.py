@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
-import pickle
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -198,12 +197,13 @@ class ForSparseRewards(ABC):
         Updates the evolution table
         """
 
-        assert tmp_pop is not None, "tmp_pop should not be None"
+        assert tmp_pop is not None, "tmp_pop should not be None" # Removed if tmp_pop is not None... want to make sure didn't break anything
 
         idx_to_individual = {x._idx: x for x in tmp_pop}
         
         for instance, (parents, solutions) in enumerate(metadata):
-
+            
+            # Uniquely retrieving the roots and their associated solvers
             root_to_solvers, solver_to_depth = {}, {}
             for iteration, list_solutions in solutions.items():
                 for solver in list_solutions:
@@ -215,6 +215,7 @@ class ForSparseRewards(ABC):
                     if solver not in solver_to_depth:
                         solver_to_depth[solver] = iteration
             
+            # Updating the roots' scores and the evolution table
             for root in root_to_solvers:
                 root_ind, solvers = idx_to_individual[root], root_to_solvers[root]
                 root_ind._useful_evolvability = len(solvers)
@@ -278,7 +279,7 @@ class ForSparseRewards(ABC):
 
             if not test_first:
 
-                # [parents, soltuions per step]
+                # [parents, solutions per step]
                 metadata = self._get_metadata(tmp_pop, "train", outer_g)
 
                 # Updating the evolution table and the individuals

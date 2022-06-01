@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import time
 import os
 import copy
 import random
@@ -35,20 +34,20 @@ class NoveltySearch:
     BD_VIS_DISPLAY = 2
 
     def __init__(
-            self,
-            archive,
-            nov_estimator,
-            mutator,
-            problem,
-            selector,
-            n_pop,
-            n_offspring,
-            agent_factory,
-            top_level_log,
-            prefix_tuple,
-            map_type="scoop",
-            initial_pop=[],  # make sure they are passed by deepcopy
-            problem_sampler=None):
+        self,
+        archive,
+        nov_estimator,
+        mutator,
+        problem,
+        selector,
+        n_pop,
+        n_offspring,
+        agent_factory,
+        top_level_log,
+        prefix_tuple,
+        map_type="scoop",
+        initial_pop=[],  # make sure they are passed by deepcopy
+        problem_sampler=None):
         """
         archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
         nov_estimator                NoveltyEstimator  object implementing the NoveltyEstimator interface. 
@@ -79,6 +78,7 @@ class NoveltySearch:
         initial_pop                  lst               if a prior on the population exists, it should be supplied here. ATTENTION: it should NOT be passed by ref
         problem_sampler              function          problem_sampler(num_samples=n) should return n instances of the problem 
         """
+        
         self.archive = archive
         if archive is not None:
             self.archive.reset()
@@ -232,9 +232,9 @@ class NoveltySearch:
                         generation_num=it
                     )
 
-                    utils_misc.dump_pickle(
-                        self.log_dir_path + f"/population_gen_{it}", parents
-                    )
+                    # utils_misc.dump_pickle(
+                    #     self.log_dir_path + f"/population_gen_{it}", parents
+                    # )
 
                     utils_misc.dump_pickle(
                         "{}/solvers_{}".format(self.log_dir_path, it),
