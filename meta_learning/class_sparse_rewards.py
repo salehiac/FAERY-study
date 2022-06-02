@@ -42,6 +42,7 @@ class ForSparseRewards(ABC):
                  num_train_samples,
                  num_test_samples,
                  agent_factory,
+                 steps_after_solved=0,
                  top_level_log_root="tmp/",
                  name_prefix="meta-learning",
                  resume_from_gen={}):
@@ -70,6 +71,7 @@ class ForSparseRewards(ABC):
         self.num_train_samples = num_train_samples
         self.num_test_samples = num_test_samples
         self.agent_factory = agent_factory
+        self.steps_after_solved = steps_after_solved
         self.resume_from_gen = resume_from_gen
         self.name_prefix = name_prefix
         self.folder_name = name_prefix + '_' + utils_misc.rand_string()
@@ -157,28 +159,32 @@ class ForSparseRewards(ABC):
             nb_samples = self.num_test_samples
 
         # FOR DEBUGING PURPOSES
-        # metadata = ns_instance(
-        #     sampler,  # sampler
-        #     [x for x in pop],  # population
-        #     self.mutator,  # mutator
-        #     self.inner_selector,  # inner_selector
-        #     self.agent_factory,  # make_ag
-        #     self.G_inner,    # G_inner
-        #     self.top_level_log,
-        #     (type_run, outer_g)
-        # )
+        # metadata = [
+        #     ns_instance(
+        #         sampler,  # sampler
+        #         [x for x in pop],  # population
+        #         self.mutator,  # mutator
+        #         self.inner_selector,  # inner_selector
+        #         self.agent_factory,  # make_ag
+        #         self.G_inner,    # G_inner
+        #         self.top_level_log,
+        #         (type_run, outer_g),
+        #         self.steps_after_solved
+        #     ) for k in range(nb_samples)
+        # ]
         
         metadata = list(
             futures.map(
                 ns_instance,
-                [sampler for _ in range(nb_samples)],  # sampler
+                [sampler] * nb_samples,  # sampler
                 [[x for x in pop] for _ in range(nb_samples)],  # population
-                [self.mutator for _ in range(nb_samples)],  # mutator
-                [self.inner_selector for _ in range(nb_samples)],  # inner_selector
-                [self.agent_factory for _ in range(nb_samples)],  # make_ag
-                [self.G_inner for _ in range(nb_samples)],    # G_inner
-                [self.top_level_log for _ in range(nb_samples)],
-                [(type_run, outer_g) for _ in range(nb_samples)]
+                [self.mutator] * nb_samples,  # mutator
+                [self.inner_selector] * nb_samples,  # inner_selector
+                [self.agent_factory] * nb_samples,  # make_ag
+                [self.G_inner] * nb_samples,    # G_inner
+                [self.top_level_log] * nb_samples,
+                [(type_run, outer_g)] * nb_samples,
+                [self.steps_after_solved] * nb_samples
             )
         )
 
@@ -192,7 +198,7 @@ class ForSparseRewards(ABC):
 
         return None
 
-    def _update_evolution_table(self, metadata, evolution_table, idx_to_row, tmp_pop=None, type_run="train"):
+    def _update_evolution_table(self, metadata, evolution_table, idx_to_row, tmp_pop=None):
         """
         Updates the evolution table
         """
@@ -256,7 +262,7 @@ class ForSparseRewards(ABC):
         else:
             raise ValueError("Unknown type of run")
         
-        self._update_evolution_table(metadata, evolution_table, idx_to_row, tmp_pop, type_run)
+        self._update_evolution_table(metadata, evolution_table, idx_to_row, tmp_pop)
 
         if save is True:
             self._save_evolution_table(evolution_table, type_run, current_index)
@@ -309,4 +315,5 @@ class ForSparseRewards(ABC):
                 test_first = False
                 metadata = self._get_metadata(self.pop, "test", outer_g)
                 
-                self._make_evolution_table(metadata, None, outer_g, "test", save)
+                # tmp_pop was set to None before.. can not see why now
+                self._make_evolution_table(metadata, tmp_pop, outer_g, "test", save)

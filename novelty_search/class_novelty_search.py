@@ -252,7 +252,11 @@ class NoveltySearch:
 
                     self.task_solvers[it] = task_solvers
 
-                    if counter_after_solved >= steps_after_solved:
+                    counter_after_solved += 1
+
+                if counter_after_solved >= 1:
+                    
+                    if counter_after_solved > steps_after_solved:
                         break
                     counter_after_solved += 1
 

@@ -65,7 +65,7 @@ def _mutate_prior_pop(n_offspring, parents, mutator, agent_factory,
 
 
 def ns_instance(sampler, population, mutator, inner_selector, make_ag,
-                G_inner, top_level_log, prefix_tuple):
+                G_inner, top_level_log, prefix_tuple, steps_after_solved):
     """
     problems are now sampled in the NS constructor
     """
@@ -73,7 +73,7 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
     population_size = len(population)
     offsprings_size = population_size
 
-    nov_estimator = class_novelty_estimators.ArchiveBasedNoveltyEstimator(k=15)
+    nov_estimator = class_novelty_estimators.ArchiveBasedNoveltyEstimator(k=min(population_size, 15))
     arch = class_archive.ListArchive(max_size=5000,
                                 growth_rate=6,
                                 growth_strategy="random",
@@ -100,5 +100,5 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
     ns.save_archive_to_file = False
     return ns(
         iters=G_inner,
-        stop_on_reaching_task=True,  # should not be False in the current implementation)
+        steps_after_solved=steps_after_solved,
     )

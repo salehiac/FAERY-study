@@ -98,6 +98,12 @@ def get_parser():
         help="the directory where the logs will be stored",
         default="tmp/"
     )
+    parser.add_argument(
+        "--steps_after_solved",
+        type=int,
+        help="maximum number of steps after the first solution is found in each inner algorithm",
+        default=0
+    )
 
     return parser
 
