@@ -3,9 +3,11 @@ gym==0.17.0
 gym_fastsim==0.0.3
 matplotlib==2.1.1
 metaworld==0.0.0
+networkx==2.5.1
 numpy==1.13.3
 opencv_python==4.5.5.62
-scikit_learn==1.0.2
+perlin_noise==1.12
+scikit_learn==1.1.1
 scipy==0.19.1
 scoop==0.7.1.1
 termcolor==1.1.0

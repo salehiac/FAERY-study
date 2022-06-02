@@ -31,7 +31,7 @@ class FAERY(ForSparseRewards):
     FAERY algorithm
     """
 
-    def __init__(self, *args, save_scores=False, **kwargs):
+    def __init__(self, *args, save_scores=True, **kwargs):
         
         if "name_prefix" not in kwargs.keys():
             kwargs["name_prefix"] = "FAERY"
