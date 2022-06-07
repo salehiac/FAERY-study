@@ -6,7 +6,6 @@ import metaworld
 
 import problem.class_agent as class_agent
 import problem.class_problem_metaworld as class_problem_metaworld
-import problem.class_problem_hard_maze as class_problem_hard_maze
 
 
 def get_parser():
@@ -177,30 +176,7 @@ def init_main(args_obj):
     }
 
     # DIFFERENT SETTINGS FOR EACH ENV
-    if args_obj.problem == "random_mazes":
-
-        agent_factory = _make_2d_maze_ag
-
-        train_sampler = functools.partial(
-            class_problem_hard_maze.sample_mazes,
-            G=args_obj.maze_size,
-            xml_template_path="../environments/env_assets/maze_template.xml",
-            tmp_dir="tmp/",
-            from_dataset=args_obj.path_train,
-            random_goals=False)
-
-        test_sampler = functools.partial(
-            class_problem_hard_maze.sample_mazes,
-            G=args_obj.maze_size,
-            xml_template_path="../environments/env_assets/maze_template.xml",
-            tmp_dir="tmp/",
-            from_dataset=args_obj.path_test,
-            random_goals=False)
-
-        experiment_config["task_name"] = "maze{}x{}".format(
-            args_obj.maze_size, args_obj.maze_size)
-
-    elif args_obj.problem == "metaworld_ml1":
+    if args_obj.problem == "metaworld_ml1":
 
         behavior_descr_type = "type_3"
         agent_factory = _make_metaworld_ml1_ag
