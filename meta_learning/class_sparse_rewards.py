@@ -42,6 +42,7 @@ class ForSparseRewards(ABC):
                  num_train_samples,
                  num_test_samples,
                  agent_factory,
+                 test_freq=10,
                  steps_after_solved=0,
                  top_level_log_root="tmp/",
                  name_prefix="meta-learning",
@@ -71,6 +72,7 @@ class ForSparseRewards(ABC):
         self.num_train_samples = num_train_samples
         self.num_test_samples = num_test_samples
         self.agent_factory = agent_factory
+        self.test_freq = test_freq
         self.steps_after_solved = steps_after_solved
         self.resume_from_gen = resume_from_gen
         self.name_prefix = name_prefix
@@ -310,7 +312,7 @@ class ForSparseRewards(ABC):
                     ind._mean_adaptation_speed = float("inf")
                     ind._adaptation_speed_lst = []
 
-            if outer_g % 10 == 0 and not disable_testing:
+            if outer_g % self.test_freq == 0 and not disable_testing:
 
                 test_first = False
                 metadata = self._get_metadata(self.pop, "test", outer_g)

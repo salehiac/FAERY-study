@@ -45,6 +45,7 @@ if __name__ == "__main__":
                     num_train_samples=args_obj.nb_samples_train,
                     num_test_samples=args_obj.nb_samples_test,
                     agent_factory=agent_factory,
+                    test_freq=args_obj.test_freq,
                     steps_after_solved=args_obj.steps_after_solved,
                     top_level_log_root=top_level_log_root,
                     resume_from_gen=resume_dict)

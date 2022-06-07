@@ -251,6 +251,8 @@ class NoveltySearch:
                     )
 
                     self.task_solvers[it] = task_solvers
+                    if len(task_solvers) == len(pop):
+                        break
 
                     counter_after_solved += 1
 

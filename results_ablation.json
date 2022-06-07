@@ -1,11 +1,10 @@
 {
     "start_end": {
-        "QD":[0,59],
-        "NS":[0,59]
+        "QD":[0,69]
         },
     "removed_obj": [-1, 0, 1],
-    "path": "data/assembly-v2/", "basename": "FAERY_{}",
-    "save_path": "data/Images/assembly-v2",
+    "path": "data/assembly-v2/no_stop/", "basename": "FAERY_{}",
+    "save_path": "data/Images/assembly-v2/no_stop",
     
     "solo": true,
     "compare": true,
@@ -18,7 +17,7 @@
     
     "colors_compare": [["dodgerblue", "lightblue"], ["red","darksalmon"], ["green", "yellowgreen"]],
     
-    "title_solo": "Performances de FAERY appliqué à {} sur 100x200 steps\nmoyenne sur 25 tâches",
+    "title_solo": "Performances de FAERY appliqué à {} sur 70x150 steps\nmoyenne sur 45 tâches",
     "title_compare": "Comparison {}",
     
     "save_basename_solo": "Results_{}",

@@ -1,11 +1,11 @@
 {
     "filerange": ["QD"],
-    "start":0, "end":59,
+    "start":0, "end":69,
 
-    "path":"data/FAERY/", "basename":"FAERY_{}_-1",
+    "path":"data/assembly-v2/no_stop/", "basename":"FAERY_{}_1",
     
-    "title": "Performances de FAERY appliqué à {} sur 75x200 steps\nmoyenne sur 25 tâches",
+    "title": "Performances de FAERY appliqué à {} sur 70x150 steps\nmoyenne sur 45 tâches",
     "colors": {"train": ["dodgerblue", "lightblue"], "test": ["indianred", "pink"]},
 
-    "save_basename": "Results_{}"
+    "save_basename": "Results_{}_c"
 }

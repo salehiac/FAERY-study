@@ -104,6 +104,12 @@ def get_parser():
         help="maximum number of steps after the first solution is found in each inner algorithm",
         default=0
     )
+    parser.add_argument(
+        "--test_freq",
+        type=int,
+        help="frequency of testing",
+        default=5
+    )
 
     return parser
 
