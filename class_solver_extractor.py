@@ -15,14 +15,20 @@ class SolverExtractor:
         if self.solvers_dict is None:
             raise ValueError("Please provide a path or an already loaded solvers_dict.")
 
+        
+        # Hard coded fix....
+        try:
+            del self.solvers_dict["FAERY_buttonpress"]
+        except:
+            pass
         ## Saved in ordred format, unlike solvers_dict
         self.algorithms = list(self.solvers_dict.keys())
         self.type_runs = ('train', 'test')
         self.meta_steps = {
-            type_run: order_str_int(self.solvers_dict[self.algorithms[0]][type_run].keys())
+            type_run: order_str_int(self.solvers_dict[self.algorithms[-1]][type_run].keys())
             for type_run in self.type_runs
         }
-        
+
         ## Positions of the populations (start, end) in flattened list
         self.position_in_list = {}
 
@@ -44,7 +50,6 @@ class SolverExtractor:
                 for meta_step in self.meta_steps[type_run]:
                     inter_dict = self.solvers_dict[algorithm][type_run][meta_step]
                     for inner_step in order_str_int(inter_dict.keys()):
-
                         self.position_in_list[(
                             algorithm,
                             type_run,

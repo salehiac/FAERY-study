@@ -5,7 +5,7 @@ from utils_misc import get_path
 from utils_extract import *
 
 
-with open(get_path(default="results_ablation.json"), 'r') as f:
+with open(get_path(default="results_nostop.json"), 'r') as f:
     params = json.load(f)
 
 
@@ -53,6 +53,7 @@ for inner_algo in params["start_end"].keys():
             removed_obj=params["removed_obj"],
             interval=500,
             to_path=params["save_path"],
+            score_lim=(400,-300),
         )
     print(40 * " ", end='\r')
     print("Done")

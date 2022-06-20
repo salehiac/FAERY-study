@@ -1,0 +1,26 @@
+{
+    "start_end": {
+        "buttonpress":[0,299]
+        },
+    "removed_obj": [0,40,100,200,400],
+    "path": "results/FAERY_buttonpress/", "basename": "FAERY_{}",
+    "save_path": "results/Images/nostop",
+    
+    "solo": true,
+    "compare": true,
+    "animate": true,
+    
+    "colors_adapt": ["dodgerblue", "lightblue"],
+    "colors_scores": [["green","yellowgreen"], ["red","darksalmon"]],
+    "colors_solved": ["gray", "dodgerblue"],
+    "colors_new_score": ["dodgerblue", "lightblue"],
+    
+    "colors_compare": [["dodgerblue", "lightblue"], ["red","darksalmon"], ["green", "yellowgreen"],
+                       ["gold", "bisque"], ["mediumorchid","plum"]],
+    
+    "title_solo": "FAERY applied to {} on 300x400 steps\naverage over 45 tasks",
+    "title_compare": "Comparison {}",
+    
+    "save_basename_solo": "Results_{}",
+    "save_basename_compare": "Results_compare_{}"
+}

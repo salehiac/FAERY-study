@@ -38,6 +38,7 @@ if __name__ == "__main__":
     list_perplex_to_tsne = []
     list_perplex_to_tsne_obj = []
     for i, to_val in enumerate(list_to_val):
+
         tsne_obj, tsne_emb = compute_tsne(   
             input_list=extractor.list,
             perplexities=params["perplexities"],
@@ -291,8 +292,8 @@ if __name__ == "__main__":
                 save_name=params["save_basename"].format("{}_animated").format(algo)
                 save_path=params["save_path"]
 
-                movie_writer = animation.PillowWriter(fps=params["params_anim"]["fps"])
-                movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
+                movie_writer = animation.FFMpegWriter(fps=params["params_anim"]["fps"])
+                movie_writer.setup(fig, "{}/{}.mp4".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
                 
                 plot_follow(
                     fig=fig, axs=[axs],
@@ -337,8 +338,8 @@ if __name__ == "__main__":
             save_name=params["save_basename"].format("{}_animated").format("clusters")
             save_path=params["save_path"]
 
-            movie_writer = animation.PillowWriter(fps=params["params_anim"]["fps"])
-            movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
+            movie_writer = animation.FFMpegWriter(fps=params["params_anim"]["fps"])
+            movie_writer.setup(fig, "{}/{}.mp4".format(save_path, save_name), dpi=params["params_anim"]["dpi"])
 
             perplex_nb_clusters = {
                 p:get_clusters(

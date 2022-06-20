@@ -1,14 +1,14 @@
 {
-    "env": "assembly-v2",
-    "nb_samples": 5000,
-    "perplexities": [75],
+    "env": "FAERY_buttonpress",
+    "nb_samples": 350000,
+    "perplexities": [50],
     "is_sequential":false,
     
-    "load_directory": "./data/{}",
-    "save_path": "data/Images/{}", 
+    "load_directory": "./results/{}",
+    "save_path": "results/Images/nostop/buttonpress/TSNE/{}", 
     "save_basename":"TSNE_{}",
 
-    "param_to_solver":true,
+    "param_to_solver":false,
     "param_or_solver":"params",
 
     "pca_components": 500,
@@ -18,20 +18,24 @@
 
     "highlight":true,
     "to_highlight": {
-        "NS_-1":"dodgerblue",
-        "NS_0":"red",
-        "NS_1":"green"
+        "buttonpress_0":"dodgerblue",
+        "buttonpress_40":"red",
+        "buttonpress_100":"green",
+        "buttonpress_200":"gold",
+        "buttonpress_400":"mediumorchid"
     },
 
     "follow":true,
     "to_follow": {
-        "NS_-1":"dodgerblue",
-        "NS_0":"red",
-        "NS_1":"green"
+        "buttonpress_0":"dodgerblue",
+        "buttonpress_40":"red",
+        "buttonpress_100":"green",
+        "buttonpress_200":"gold",
+        "buttonpress_400":"mediumorchid"
     },
-    "meta_steps":{"train": ["0","1"]},
+    "meta_steps":{"train": "all"},
 
-    "clustering":true,
+    "clustering":false,
     "cluster_quantile": 0.05,
 
     "params_plot": {

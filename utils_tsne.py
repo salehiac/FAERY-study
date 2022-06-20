@@ -55,6 +55,7 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None, ma
             continue
 
         for name in files:
+            print(algorithm, type_run, meta_step, nb_sampled, end="\r")
             if nb_sampled >= max_samples:
                 break
 
@@ -74,7 +75,7 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None, ma
                         list_algo_dict[i][algorithm][type_run][meta_step][name[len(bn)+1:-4]] = content
                         nb_sampled += len(content)
 
-    print("Sampled {} individuals".format(nb_sampled))   
+    print("Sampled {} individuals".format(nb_sampled))
     return list_algo_dict
 
 
@@ -96,7 +97,7 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True,
 
     solvers_to_compute = input_list[:]
     solver_points = np.array([to_val(ag).reshape(1,-1)[0] for ag in solvers_to_compute])
-    
+
     if pca_components is not None:
         if type(pca_components) != int:
             raise ValueError("Please enter a number for the pca_components argument")
@@ -208,7 +209,7 @@ def plot_follow(
 
     if  movie_writer is None:
         movie_writer = type_writer(fps=fps)
-        movie_writer.setup(fig, "{}/{}.gif".format(save_path, save_name), dpi=dpi)
+        movie_writer.setup(fig, "{}/{}.mp4".format(save_path, save_name), dpi=dpi)
 
     # Plotting the background solvers
     for k, perplexity in enumerate(perplexities):

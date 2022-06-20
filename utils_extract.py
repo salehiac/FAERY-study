@@ -16,7 +16,7 @@ def read_file(filename, prefix=None):
             return np.array(list(data.values())[0])
     except FileNotFoundError:
         if prefix != "test":
-            raise FileNotFoundError("Cannot find the file:", filename)
+            print("Cannot find the file", filename, end='\r')
         return None
 
 
@@ -55,6 +55,9 @@ def get_evolution(path, name, start, end, prefix="train"):
 
         arr = read_file(filename, prefix=prefix)
         if arr is None:
+            if prefix == "train":   
+                print("Could not read", filename, "stopping here for current graph.")
+                break
             continue
             
         list_nb_solved_ind.append([len(l[np.where(l>=0)]) for l in arr])
@@ -89,6 +92,8 @@ def get_score(path, name, start, end):
     for filename in ["{}/meta-scores_train_{}.npz".format(path+name,i) for i in range(start, end+1)]:
 
         arr = read_file(filename)
+        if arr is None:
+            break
         init_len = len(arr)
 
         list_raw_scores.append(arr[:])
@@ -146,6 +151,7 @@ def save_lone_graph(path, basename, start, end,
         
         list_raw_scores = data_score["raw scores"]
         list_nb_solved = data["tasks solved for each individual"]
+        len_learned = len(list_nb_solved)
 
         solution_per_task = []
         solution_per_task_mean_std = [[],[]]
@@ -166,7 +172,7 @@ def save_lone_graph(path, basename, start, end,
         solution_per_task_mean_std[0] = np.array(solution_per_task_mean_std[0])
         solution_per_task_mean_std[1] = np.array(solution_per_task_mean_std[1])
 
-        x_values = range(start, end+1)
+        x_values = range(start, end+1)[:len_learned]
 
         fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
         
@@ -219,7 +225,7 @@ def save_lone_graph(path, basename, start, end,
 
         axs1_0_twinx = axs[1][0].twinx()
         for i, x in enumerate(x_values):
-            nb_solved = data["tasks solved for each individual"][i]
+            nb_solved = list_nb_solved[i]
             axs[1][0].scatter([x for _ in range(len(nb_solved))], nb_solved, color=colors_solved[0])
             
         axs1_0_twinx.plot(x_values, data_score["individuals that solved at least one task"], color=colors_solved[1])
@@ -265,28 +271,35 @@ def save_compare_graph(start, end,
 
     fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
     x_values = range(start, end+1)
+    
+    common_args = {
+        "list_colors_couple":[*colors_compare],
+        "list_labels":removed_obj,
+        
+        "area_alpha":.3,
+
+        "xlabel":"Generation",
+
+        "toplot_x":x_values,
+        "show_area":True
+    }
 
     graph_filled(
         ax=axs[0][0],
 
-        toplot_x=x_values,
         list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(removed_obj))],
         list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(0, float('inf')),
-        area_alpha=.5,
 
-        xlabel="Generation",
         ylabel="Necessary adaptations\n(meand and std)",
+        extr_y=(0, float('inf')),
 
+        **common_args
     )
 
     for k in range(len(removed_obj)):
         raw_scores = results_obj[k]["new score (raw, mean_std)"][0]
 
-        for i, x in enumerate(x_values):
+        for i, x in enumerate(x_values[:len(raw_scores)]):
             axs[0][1].scatter([x for _ in range(len(raw_scores[i]))], raw_scores[i],
             color=colors_compare[k][0], alpha=.5)
 
@@ -300,35 +313,25 @@ def save_compare_graph(start, end,
     graph_filled(
         ax=axs[1][0],
 
-        toplot_x=x_values,
         list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(removed_obj))],
         list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(0, float('inf')),
-        area_alpha=.5,
 
-        xlabel="Generation",
         ylabel="F0",
+        extr_y=(0, float('inf')),
 
+        **common_args
     )
 
     graph_filled(
         ax=axs[1][1],
 
-        toplot_x=x_values,
         list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(removed_obj))],
         list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(removed_obj))],
-        list_colors_couple=[*colors_compare],
-        list_labels=removed_obj,
-        
-        extr_y=(float('-inf'), 0),
-        area_alpha=.5,
 
-        xlabel="Generation",
         ylabel="F1",
+        extr_y=(float('-inf'), 0),
 
+        **common_args
     )
 
     plt.suptitle(title_compare.format(inner_algo))
@@ -337,22 +340,23 @@ def save_compare_graph(start, end,
     return {}
 
 
-def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval, to_path):
+def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval, to_path, score_lim=(10,-80)):
     """
     Saves an animation of the individual's scores
     """
     results_obj = results_obj
     removed_obj = removed_obj
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(20,20), dpi=160)
 
     def animate(i):
+        print("Step {}/{}".format(i, end), end="\r")
         plt.clf()
 
         RB = [plt.plot([], [], '+')[0] for obj in removed_obj]
         for k, obj in enumerate(removed_obj):
-            data_score = results_obj[obj]["data score"]["raw scores"]
-            scores = np.array([val for val in data_score[i] if val[-1] > float('-inf')])
+            data_score = results_obj[k]["data score"]["raw scores"]
+            scores = np.array([val for val in data_score[min(i, len(data_score)-1)] if val[-1] > float('-inf')])
 
             try:
                 hull = ConvexHull(scores)
@@ -361,7 +365,6 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
                 
                 #plt.fill_between(scores[hull.vertices, 0], scores[hull.vertices, 1], color=colors_compare[k][1], alpha=.5)
             except QhullError:
-                print("Points share same coordinates")
                 pass
 
             x = [val[0] for val in scores]
@@ -372,7 +375,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
             RB[k].set_color(colors_compare[k][0])
 
         plt.legend()
-        plt.axis([0,10,-80,1])
+        plt.axis([0,score_lim[0],score_lim[1],1])
         plt.grid(True)
         plt.xlabel("F0")
         plt.ylabel("F1")
@@ -382,7 +385,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
 
     my_anim = animation.FuncAnimation(fig, animate, frames=end, interval=interval)
     
-    my_anim.save("{}/{}/animated_scores_{}.gif".format(to_path, inner_algo, inner_algo), writer="pillow")
+    my_anim.save("{}/{}/animated_scores_{}.mp4".format(to_path, inner_algo, inner_algo), writer="ffmpeg")
 
 
 def graph_filled(ax,
@@ -396,6 +399,8 @@ def graph_filled(ax,
                 extr_margin=(0.8,1.2),
                 area_alpha=.8,
 
+                show_area=True,
+
                 ) -> None:
 
     """
@@ -407,17 +412,18 @@ def graph_filled(ax,
         color_couple = list_colors_couple[i%len(list_colors_couple)]
         label = "" if (list_labels is None) or (i > len(list_labels)) else str(list_labels[i])
 
-        ax.plot(toplot_x, list_toplot_y_main[i],
+        ax.plot(toplot_x[:len(list_toplot_y_main[i])], list_toplot_y_main[i],
                 color=color_couple[0],
                 label=label
         )
         
-        ax.fill_between(toplot_x,
-                        [min(extr_y[1], val) for val in list_toplot_y_main[i] + list_toplot_y_area[i]],
-                        [max(extr_y[0], val) for val in list_toplot_y_main[i] - list_toplot_y_area[i]],
-                        color=color_couple[1],
-                        alpha=area_alpha
-        )
+        if show_area is True:
+            ax.fill_between(toplot_x[:len(list_toplot_y_main[i])],
+                            [min(extr_y[1], val) for val in list_toplot_y_main[i] + list_toplot_y_area[i]],
+                            [max(extr_y[0], val) for val in list_toplot_y_main[i] - list_toplot_y_area[i]],
+                            color=color_couple[1],
+                            alpha=area_alpha
+            )
     
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
