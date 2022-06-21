@@ -1,5 +1,5 @@
 {
-    "env": "FAERY_buttonpress",
+    "env": "FAERY_buttonpress/FAERY_buttonpress_0",
     "nb_samples": 350000,
     "perplexities": [50],
     "is_sequential":false,

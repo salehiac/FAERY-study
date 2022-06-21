@@ -113,7 +113,7 @@ def compute_tsne(input_list:list, perplexities=[25,50,75,100], verbose=True,
         if verbose is True:
             print("Computing TSNE for {} perplexity..".format(perplexity), end='\r')
         
-        perplexity_to_tsne[perplexity] = TSNE(n_components=2, perplexity=perplexity) # useful to gather posterior info
+        perplexity_to_tsne[perplexity] = TSNE(n_components=2, perplexity=perplexity, n_jobs=-1) # useful to gather posterior info
         solvers_embedding = perplexity_to_tsne[perplexity].fit_transform(solver_points)
         perplexity_to_embedding[perplexity] = solvers_embedding
     
