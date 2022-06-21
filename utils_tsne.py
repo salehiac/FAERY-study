@@ -191,7 +191,7 @@ def plot_follow(
     base_color="blue", box_size=12, marker='o',
     base_title="{} {} {} {}", save_path=None, save_name="",
     subtitle=True,
-    type_writer=animation.PillowWriter, fps=30, dpi=100, time_pause=1.5):
+    type_writer=animation.FFMpegWriter, fps=30, dpi=100, time_pause=1.5):
     """
     Animates the TSNE plots for given meta_steps and inner_steps
     """
@@ -207,7 +207,8 @@ def plot_follow(
         if len(perplexities) == 1:
             axs = [[axs]]
 
-    if  movie_writer is None:
+    movie_was_none = movie_writer is None
+    if  movie_was_none:
         movie_writer = type_writer(fps=fps)
         movie_writer.setup(fig, "{}/{}.mp4".format(save_path, save_name), dpi=dpi)
 
@@ -293,7 +294,7 @@ def plot_follow(
                         for k in range(len(list_perplex_to_extractor)):
                             objects[k][i5][1].set_data([], [])
     
-    if movie_writer is None:
+    if movie_was_none:
         print("Wrapping up..", end='\r')
         movie_writer.finish()
         print()

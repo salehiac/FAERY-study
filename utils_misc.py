@@ -284,7 +284,7 @@ def get_path(parser=None, to_parse=True, default="./results.json", verbose=True)
     """
 
     if parser is None:
-        parser = parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "--path_params",

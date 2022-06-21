@@ -9,6 +9,7 @@ from class_solver_extractor import SolverExtractor
 with open(get_path(default="tsne.json"), 'r') as f:
     params = json.load(f)
 
+
 params["load_directory"] = params["load_directory"].format(params["env"])
 params["save_path"] = params["save_path"].format(params["env"])
 
@@ -144,7 +145,6 @@ if __name__ == "__main__":
 
             if params["follow"] is True:
                 print("Computing animation")
-
                 params_data["list_perplex_to_extractor"] = [params_data["perplex_to_extractor"]]
                 del params_data["perplex_to_extractor"]
 
@@ -160,7 +160,7 @@ if __name__ == "__main__":
 
                         base_title=title_animation,
                         
-                        meta_steps=params["meta_steps"] if type(params["meta_steps"]) is not str
+                        meta_steps=params["meta_steps"] if type(list(params["meta_steps"].values())[0]) is not str
                             else {"train":extractor.meta_steps["train"]},
 
                         **params_data,
