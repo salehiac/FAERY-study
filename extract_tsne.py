@@ -160,8 +160,7 @@ if __name__ == "__main__":
 
                         base_title=title_animation,
                         
-                        meta_steps=params["meta_steps"] if type(list(params["meta_steps"].values())[0]) is not str
-                            else {"train":extractor.meta_steps["train"]},
+                        meta_steps=params["meta_steps"],
 
                         **params_data,
                         **params["params_plot"],
@@ -306,8 +305,7 @@ if __name__ == "__main__":
                     base_title=title_animation,
                     subtitle=False,
                     
-                    meta_steps=params["meta_steps"] if type(params["meta_steps"]) is not str
-                        else {"train":extractor.meta_steps["train"]},
+                    meta_steps=params["meta_steps"],
 
                     **params_data,
                     **params["params_plot"],

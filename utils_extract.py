@@ -50,8 +50,10 @@ def get_evolution(path, name, start, end, prefix="train"):
     list_prop_solved = []
     # Average minimum adaptations to solve a task
     list_avg_adapt, list_std_adapt = [], []
+    # Visited steps
+    list_steps = []
 
-    for filename in ["{}/evolution_table_{}_{}.npz".format(path+name,prefix,i) for i in range(start, end+1)]:
+    for k, filename in enumerate(["{}/evolution_table_{}_{}.npz".format(path+name,prefix,i) for i in range(start, end+1)]):
 
         arr = read_file(filename, prefix=prefix)
         if arr is None:
@@ -59,7 +61,8 @@ def get_evolution(path, name, start, end, prefix="train"):
                 print("Could not read", filename, "stopping here for current graph.")
                 break
             continue
-            
+        list_steps.append(k)
+
         list_nb_solved_ind.append([len(l[np.where(l>=0)]) for l in arr])
         list_nb_solved_task.append([len(l[np.where(l>=0)]) for l in arr.T])
 
@@ -77,6 +80,7 @@ def get_evolution(path, name, start, end, prefix="train"):
         "individuals that solved task":list_nb_solved_task,
         "proportion solved":list_prop_solved,
         "necessary adaptations (mean/std)":(list_avg_adapt, list_std_adapt),
+        "all steps":list_steps,
     }
 
 
@@ -124,7 +128,7 @@ def get_score(path, name, start, end):
 
 def save_lone_graph(path, basename, start, end,
                     inner_algo, removed_obj,
-                    colors_adapt, colors_scores, colors_solved,
+                    colors_adapt, colors_adapt_test, colors_scores, colors_solved,
                     save_basename, title, to_path
                     ):
     """
@@ -143,6 +147,12 @@ def save_lone_graph(path, basename, start, end,
                              name=name,
                              start=start,
                              end=end)
+        
+        data_test = get_evolution(path=path,
+                                  name=name,
+                                  start=start,
+                                  end=end,
+                                  prefix="test")
 
         data_score = get_score(path=path,
                                name=name,
@@ -172,18 +182,17 @@ def save_lone_graph(path, basename, start, end,
         solution_per_task_mean_std[0] = np.array(solution_per_task_mean_std[0])
         solution_per_task_mean_std[1] = np.array(solution_per_task_mean_std[1])
 
-        x_values = range(start, end+1)[:len_learned]
-
         fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
-        
 
         graph_filled(
             ax=axs[0][0],
-            toplot_x=x_values,
-            list_toplot_y_main=[data["necessary adaptations (mean/std)"][0]],
-            list_toplot_y_area=[data["necessary adaptations (mean/std)"][1]],
-            list_colors_couple=[colors_adapt],
+            list_toplot_x=[data["all steps"], data_test["all steps"]],
+            list_toplot_y_main=[data["necessary adaptations (mean/std)"][0], data_test["necessary adaptations (mean/std)"][0]],
+            list_toplot_y_area=[data["necessary adaptations (mean/std)"][1], data_test["necessary adaptations (mean/std)"][1]],
+            list_colors_couple=[colors_adapt, colors_adapt_test],
             
+            list_show_area=[True, False],
+
             extr_y=(0, float('inf')),
 
             xlabel="Generation",
@@ -192,7 +201,7 @@ def save_lone_graph(path, basename, start, end,
 
         graph_filled(
             ax=axs[0][1],
-            toplot_x=x_values,
+            list_toplot_x=[data["all steps"]],
             list_toplot_y_main=[data_score["F0"][0]],
             list_toplot_y_area=[data_score["F0"][1]],
             list_colors_couple=[colors_scores[0]],
@@ -209,7 +218,7 @@ def save_lone_graph(path, basename, start, end,
         ax1_twinx = axs[0][1].twinx()
         graph_filled(   
             ax=ax1_twinx,
-            toplot_x=x_values,
+            list_toplot_x=[data["all steps"]],
             list_toplot_y_main=[data_score["F1"][0]],
             list_toplot_y_area=[data_score["F1"][1]],
             list_colors_couple=[colors_scores[1]],
@@ -224,11 +233,11 @@ def save_lone_graph(path, basename, start, end,
         ax1_twinx.yaxis.label.set_color(colors_scores[1][0])
 
         axs1_0_twinx = axs[1][0].twinx()
-        for i, x in enumerate(x_values):
+        for i, x in enumerate(data["all steps"]):
             nb_solved = list_nb_solved[i]
             axs[1][0].scatter([x for _ in range(len(nb_solved))], nb_solved, color=colors_solved[0])
             
-        axs1_0_twinx.plot(x_values, data_score["individuals that solved at least one task"], color=colors_solved[1])
+        axs1_0_twinx.plot(data["all steps"], data_score["individuals that solved at least one task"], color=colors_solved[1])
 
         axs[1][0].set_xlabel("Generation")
         axs[1][0].set_ylabel("Number of tasks solved per individual")
@@ -280,7 +289,7 @@ def save_compare_graph(start, end,
 
         "xlabel":"Generation",
 
-        "toplot_x":x_values,
+        "list_toplot_x":[x_values],
         "show_area":True
     }
 
@@ -390,7 +399,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
 
 def graph_filled(ax,
 
-                toplot_x, list_toplot_y_main, list_toplot_y_area,
+                list_toplot_x, list_toplot_y_main, list_toplot_y_area,
                 list_colors_couple=[("indianred", "pink")],
                 list_labels=None,
 
@@ -398,8 +407,10 @@ def graph_filled(ax,
                 extr_y=(float('-inf'), float('inf')),
                 extr_margin=(0.8,1.2),
                 area_alpha=.8,
+                list_area_alpha=[],
 
                 show_area=True,
+                list_show_area=[]
 
                 ) -> None:
 
@@ -407,22 +418,27 @@ def graph_filled(ax,
     Easily define graphs with filled area
     """
     
+    if len(list_area_alpha) == 0:
+        list_area_alpha = len(list_toplot_x) * [area_alpha]
+    if len(list_show_area) == 0:
+        list_show_area = len(list_toplot_x) * [show_area]
+    
     for i in range(len(list_toplot_y_main)):
 
         color_couple = list_colors_couple[i%len(list_colors_couple)]
         label = "" if (list_labels is None) or (i > len(list_labels)) else str(list_labels[i])
 
-        ax.plot(toplot_x[:len(list_toplot_y_main[i])], list_toplot_y_main[i],
+        ax.plot(list_toplot_x[i][:len(list_toplot_y_main[i])], list_toplot_y_main[i],
                 color=color_couple[0],
                 label=label
         )
         
-        if show_area is True:
-            ax.fill_between(toplot_x[:len(list_toplot_y_main[i])],
+        if list_show_area[i] is True:
+            ax.fill_between(list_toplot_x[i][:len(list_toplot_y_main[i])],
                             [min(extr_y[1], val) for val in list_toplot_y_main[i] + list_toplot_y_area[i]],
                             [max(extr_y[0], val) for val in list_toplot_y_main[i] - list_toplot_y_area[i]],
                             color=color_couple[1],
-                            alpha=area_alpha
+                            alpha=list_area_alpha[i]
             )
     
     ax.set_xlabel(xlabel)

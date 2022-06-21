@@ -14,9 +14,9 @@
     "pca_components": 500,
     "titles_side":["Parameter space {} perplexity and PCA of {} components", "Behavioral space {} perplexity"],
 
-    "bland":true,
+    "bland":false,
 
-    "highlight":true,
+    "highlight":false,
     "to_highlight": {
         "buttonpress_0":"dodgerblue",
         "buttonpress_40":"red",
@@ -33,7 +33,7 @@
         "buttonpress_200":"gold",
         "buttonpress_400":"mediumorchid"
     },
-    "meta_steps":{"train": "all"},
+    "meta_steps":"all",
 
     "clustering":false,
     "cluster_quantile": 0.05,

@@ -23,6 +23,7 @@ for inner_algo in params["start_end"].keys():
             inner_algo=inner_algo,
             removed_obj=params["removed_obj"],
             colors_adapt=params["colors_adapt"],
+            colors_adapt_test=params["colors_adapt_test"],
             colors_scores=params["colors_scores"],
             colors_solved=params["colors_solved"],
             save_basename=save_basepath + params["save_basename_solo"],

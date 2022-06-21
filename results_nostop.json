@@ -7,10 +7,11 @@
     "save_path": "results/Images/nostop",
     
     "solo": true,
-    "compare": true,
-    "animate": true,
+    "compare": false,
+    "animate": false,
     
-    "colors_adapt": ["dodgerblue", "lightblue"],
+    "colors_adapt": ["dodgerblue", "lightskyblue"],
+    "colors_adapt_test": ["crimson", "lightcoral"],
     "colors_scores": [["green","yellowgreen"], ["red","darksalmon"]],
     "colors_solved": ["gray", "dodgerblue"],
     "colors_new_score": ["dodgerblue", "lightblue"],

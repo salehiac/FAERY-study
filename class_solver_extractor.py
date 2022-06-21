@@ -25,8 +25,10 @@ class SolverExtractor:
         self.algorithms = list(self.solvers_dict.keys())
         self.type_runs = ('train', 'test')
         self.meta_steps = {
-            type_run: order_str_int(self.solvers_dict[self.algorithms[-1]][type_run].keys())
-            for type_run in self.type_runs
+            type_run: {
+                algorithm:order_str_int(self.solvers_dict[algorithm][type_run].keys())
+                for algorithm in self.algorithms
+             } for type_run in self.type_runs
         }
 
         ## Positions of the populations (start, end) in flattened list
@@ -47,7 +49,7 @@ class SolverExtractor:
 
         for algorithm in self.algorithms:
             for type_run in self.type_runs:
-                for meta_step in self.meta_steps[type_run]:
+                for meta_step in self.meta_steps[type_run][algorithm]:
                     inter_dict = self.solvers_dict[algorithm][type_run][meta_step]
                     for inner_step in order_str_int(inter_dict.keys()):
                         self.position_in_list[(
@@ -75,7 +77,7 @@ class SolverExtractor:
             output_dict[algorithm] = {}
             for type_run in self.type_runs:
                 output_dict[algorithm][type_run] = {}
-                for meta_step in self.meta_steps[type_run]:
+                for meta_step in self.meta_steps[type_run][algorithm]:
                     output_dict[algorithm][type_run][meta_step] = {}
                     for inner_step in order_str_int(self.solvers_dict[algorithm][type_run][meta_step].keys()):
                         start, end = self.position_in_list[

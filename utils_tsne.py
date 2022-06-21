@@ -240,7 +240,13 @@ def plot_follow(
         algorithm = basic_extractor.find_algorithm(algo)
 
         for i2, type_run in enumerate(types_run):
-            for i3, meta_step in enumerate(meta_steps[type_run]):
+            meta_step_counter = 0
+            for i3, meta_step in enumerate(basic_extractor.meta_steps[type_run][algorithm]):
+                
+                if meta_steps != "all" and meta_step not in meta_steps:
+                    continue
+                meta_step_counter += 1
+                
                 inner_steps = order_str_int(basic_extractor.solvers_dict[algorithm][type_run][meta_step].keys())
                 iterate_steps = inner_steps if animate_inner is True else [inner_steps[0]]
 
@@ -253,7 +259,7 @@ def plot_follow(
                                 .format(
                                     i1+1, len(to_highlight),
                                     i2+1, len(types_run),
-                                    i3+1, len(meta_steps[type_run]),
+                                    meta_step_counter, len(meta_steps),
                                     i4+1, len(iterate_steps),
                                     i5+1, len(perplexities)
                                 ),
