@@ -1,0 +1,7 @@
+--task_name button-press-topdown-v2
+--inner_steps 400
+--outer_steps 300
+--pop_size 35
+--off_size 35
+--nb_samples_train 45
+--nb_samples_test 45

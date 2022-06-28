@@ -1,0 +1,7 @@
+--task_name hammer-v2
+--inner_steps 150
+--outer_steps 200
+--pop_size 40
+--off_size 40
+--nb_samples_train 45
+--nb_samples_test 45
