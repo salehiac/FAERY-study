@@ -9,10 +9,8 @@ Multi-objective optimization of a meta-population evaluated in a given number of
 For a meta-individual $p_j$ evaluated on $M$ environments in which it produced the $\zheta_{ij}$ lineage, it is given two scores :
 
 $$
-\begin{cases}
 f_0(p_j) = \sum_{i=0}^{M-1}\sum_{s\in\zeta_{ij}} \psi_i(s) \\
 f_1(p_j) = \frac{-1}{f_0(p_j)}\sum_{i=0}^{M-1}\sum_{s\in\zeta_{ij}}\psi_i(s)d_m(s,p_j)
-\end{cases}
 $$
 
 with $\psi_i(s)$ a binary operator checking if $s$ solved the environment; $d_m(s, p_j)$ the expected number of mutations to reach $s$ from $p_j$ $\approx$ depth in the genealogy tree.
