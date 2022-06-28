@@ -35,7 +35,7 @@ To run a quick test run the following command from the [FAERY](./) directory :
 
 ## References
 <a id="1">[1]</a> 
-*Few-shot Quality-Diversity Optimization*, Salehi and Coninx and Doncieux, IEEE Robotics and Automation Letters [2022](https://ieeexplore.ieee.org/abstract/document/9705622)
+A. Salehi, A. Coninx and S. Doncieux, "Few-Shot Quality-Diversity Optimization," in IEEE Robotics and Automation Letters, vol. 7, no. 2, pp. 4424-4431, [April 2022](https://ieeexplore.ieee.org/abstract/document/9705622), doi: 10.1109/LRA.2022.3148438.
 
 <a id="2">[2]</a> 
 *Meta-World: A Benchmark and Evaluation for Multi-Task and Meta Reinforcement Learning*, Tianhe Yu and Deirdre Quillen and Zhanpeng He and Ryan Julian and Karol Hausman and Chelsea Finn and Sergey Levine, Conference on Robot Learning (CoRL) [2019](https://arxiv.org/abs/1910.10897)
