@@ -1,0 +1,7 @@
+--task_name window-close-v2
+--inner_steps 10
+--outer_steps 5
+--pop_size 10
+--off_size 10
+--nb_samples_train 5
+--nb_samples_test 5
