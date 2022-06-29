@@ -1,0 +1,26 @@
+{
+    "start_end": {
+        "assembly":[0,70]
+        },
+    "removed_obj": [0,15,30,75,150],
+    "path": "data/FAERY_assembly/", "basename": "FAERY_{}",
+    "save_path": "Images/nostop",
+    
+    "compare": true,
+    "animate": true,
+    
+    "score_lim": [15, -60],
+    "colors_adapt": ["dodgerblue", "lightskyblue"],
+    "colors_adapt_test": ["crimson", "lightcoral"],
+    "colors_scores": [["green","yellowgreen"], ["red","darksalmon"]],
+    "colors_solved": ["gray", "dodgerblue"],
+    "colors_new_score": ["dodgerblue", "lightblue"],
+    
+    "colors_compare": [["dodgerblue", "lightblue"], ["red","darksalmon"], ["green", "yellowgreen"], ["gold", "bisque"], ["purple", "pink"]],
+    
+    "title_solo": "FAERY applied to {} on 70x150 steps\naverage over 45 tasks",
+    "title_compare": "Comparison {}",
+    
+    "save_basename_solo": "Results_{}",
+    "save_basename_compare": "Results_compare_{}"
+}

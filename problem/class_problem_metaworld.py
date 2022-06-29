@@ -142,7 +142,7 @@ class MetaWorldMT1(Problem):
             self.ml1 = metaworld.ML1(
                 self.ML_env_name
             )  # constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
-            # will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
+            # will vary (note that in for example pick and place, the initial configuration of the object varies, not the goal).
             # So ml1.train_classes is going to be of lenght 1
 
             list_sample_class = self.ml1.train_classes if self.mode == "train" else self.ml1.test_classes

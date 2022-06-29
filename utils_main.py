@@ -15,7 +15,7 @@ def get_parser():
     parser.add_argument(
         "--problem",
         type=str,
-        help="metaworld_ml1, metaworld_ml10, random_mazes",
+        help="metaworld_ml1, metaworld_ml10",
         default="metaworld_ml1"
     )
     parser.add_argument(
@@ -25,30 +25,11 @@ def get_parser():
         default=""
     )
     parser.add_argument(
-        '--path_train',
-        type=str,
-        help="path where *xml and associated *bpm files for training can be found (see ../environments/mazegenerator)",
-        default=""
-    )
-    parser.add_argument(
-        '--path_test',
-        type=str,
-        help="path where *xml and associated *bpm files for testing can be found (see ../environments/mazegenerator)",
-        default=""
-    )
-    parser.add_argument(
-        '--maze_size',
-        type=int,
-        help="size of the maze (8 or 10)",
-        default=8
-    )
-    parser.add_argument(
         '--task_name',
         type=str,
-        help="task name for metaworld_ml1 (has to be in metaworld.ML1.ENV_NAMES",
+        help="task name for metaworld_ml1 (has to be in metaworld.ML1.ENV_NAMES)",
         default="assembly-v2"
     )
-
     parser.add_argument(
         '--pop_size',
         type=int,
@@ -95,7 +76,7 @@ def get_parser():
         "--top_level_log",
         type=str,
         help="the directory where the logs will be stored",
-        default="tmp/"
+        default="results/data"
     )
     parser.add_argument(
         "--steps_after_solved",
@@ -111,19 +92,6 @@ def get_parser():
     )
 
     return parser
-
-
-def _make_2d_maze_ag(ag_idx):
-    """
-    because scoop only likes top-level functions/objects...
-    """
-    agt = class_agent.SmallFC_FW(ag_idx,
-                            in_d=5,
-                            out_d=2,
-                            num_hidden=3,
-                            hidden_dim=10,
-                            output_normalisation="")
-    return agt
 
 
 def _make_metaworld_ml1_ag(ag_idx):
