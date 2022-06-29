@@ -64,7 +64,7 @@ In order to plot the above graphs, one needs to set up the scripts with the prov
 
 - a TSNE plot for different perplexity parameters
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/49323355/176412242-f92ab1d3-9f58-46e7-826a-1e7ddb488478.png" width="500" />
+  <img src="https://user-images.githubusercontent.com/49323355/176412242-f92ab1d3-9f58-46e7-826a-1e7ddb488478.png" width="100%" />
 </p>
 
 - an animation of the solutions within the TSNE plot as they are found
