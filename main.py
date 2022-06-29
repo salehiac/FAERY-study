@@ -21,6 +21,8 @@ from utils_main import init_main, get_parser
 from meta_learning.class_sparse_rewards_faery import FAERYNS, FAERYQD, FAERYRANDOM, FAERYRANDOM_COMPLETE
 
 
+# MAIN FILE USED TO RUN FAERY WITH GIVEN PARAMETERS
+
 if __name__ == "__main__":
 
     args_obj = get_parser().parse_args()

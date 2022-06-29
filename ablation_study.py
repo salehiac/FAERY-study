@@ -4,6 +4,7 @@ import numpy as np
 from utils_main import init_main, get_parser
 from meta_learning.class_sparse_rewards_faery import FAERY, FAERYQD, FAERYNS, FAERYRANDOM
 
+# MAIN FILE USED TO RUN ABLATION STUDY. SAME AS MAIN WITH ADDITIONAL PARAMETER --to_remove
 
 class FAERY_Ablation(FAERY):
     """

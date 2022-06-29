@@ -186,7 +186,8 @@ class ForSparseRewards(ABC):
                 [self.G_inner] * nb_samples,    # G_inner
                 [self.top_level_log] * nb_samples,
                 [(type_run, outer_g)] * nb_samples,
-                [self.steps_after_solved] * nb_samples
+                [self.steps_after_solved] * nb_samples,
+                list(nb_samples)
             )
         )
 

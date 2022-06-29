@@ -9,7 +9,7 @@ PARAMS_OTHER="
 "
 
 # Creating the output directory
-OUTPUT_PATH=/results/$1_$date
+OUTPUT_PATH=/results/data/$1_$date
 mkdir -p $OUTPUT_PATH
 
 # Storing used parameters

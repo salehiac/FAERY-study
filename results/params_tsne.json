@@ -16,7 +16,7 @@
 
     "bland":true,
 
-    "highlight":false,
+    "highlight":true,
     "to_highlight": {
         "buttonpress_0":"dodgerblue",
         "buttonpress_40":"red",

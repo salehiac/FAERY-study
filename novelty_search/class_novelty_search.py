@@ -47,7 +47,8 @@ class NoveltySearch:
         prefix_tuple,
         map_type="scoop",
         initial_pop=[],  # make sure they are passed by deepcopy
-        problem_sampler=None):
+        problem_sampler=None,
+        taskid=0):
         """
         archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
         nov_estimator                NoveltyEstimator  object implementing the NoveltyEstimator interface. 
@@ -142,6 +143,7 @@ class NoveltySearch:
 
         # for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
         self.task_solvers = {}  # key,value=generation, list(agents)
+        self.taskid = taskid
 
     def eval_agents(self, agents):
 
@@ -227,17 +229,8 @@ class NoveltySearch:
 
                 if len(task_solvers):
 
-                    self.visualise_bds(
-                        parents + [x for x in offsprings if x._solved_task],
-                        generation_num=it
-                    )
-
-                    # utils_misc.dump_pickle(
-                    #     self.log_dir_path + f"/population_gen_{it}", parents
-                    # )
-
                     utils_misc.dump_pickle(
-                        "{}/solvers_{}".format(self.log_dir_path, it),
+                        "{}/{}_solvers_{}".format(self.log_dir_path, self.taskid, it),
                         [ag for ag in task_solvers]
                     )
 
@@ -307,14 +300,3 @@ class NoveltySearch:
             x.eval()
 
         return mutated_ags
-
-    def visualise_bds(self, agents, generation_num=-1):
-
-        if self.visualise_bds_flag != NoveltySearch.BD_VIS_DISABLE:  # and it%10==0:
-            q_flag = True if self.visualise_bds_flag == NoveltySearch.BD_VIS_TO_FILE else False
-            archive_it = iter(self.archive) if self.archive is not None else []
-            self.problem.visualise_bds(archive_it,
-                                       agents,
-                                       quitely=q_flag,
-                                       save_to=self.log_dir_path,
-                                       generation_num=generation_num)

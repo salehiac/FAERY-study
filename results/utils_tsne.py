@@ -72,7 +72,7 @@ def get_files(path:str, basename:str = "solvers", basenames:List[str] = None, ma
                             except:
                                 break
                         
-                        list_algo_dict[i][algorithm][type_run][meta_step][name[len(bn)+1:-4]] = content
+                        list_algo_dict[i][algorithm][type_run][meta_step][name.split('_')[-1][:-4]] = content
                         nb_sampled += len(content)
 
     print("Sampled {} individuals".format(nb_sampled))

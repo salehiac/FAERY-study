@@ -164,7 +164,7 @@ def get_score(path, name, start, end):
     
 
 def save_lone_graph(path, basename, start, end,
-                    inner_algo, removed_obj,
+                    inner_algo, suffix,
                     colors_adapt, colors_adapt_test, colors_scores, colors_solved,
                     save_basename, title, to_path
                     ):
@@ -177,7 +177,7 @@ def save_lone_graph(path, basename, start, end,
 
     results_obj = []
 
-    for data_name in ["{}_{}".format(inner_algo, removed) for removed in removed_obj]:
+    for data_name in ["{}_{}".format(inner_algo, removed) for removed in suffix]:
         results_obj.append({})
 
         name = basename.format(data_name)
@@ -307,7 +307,7 @@ def save_lone_graph(path, basename, start, end,
 
 
 def save_compare_graph(start, end,
-                       inner_algo, removed_obj,
+                       inner_algo, suffix,
                        colors_compare,
                        save_basename_compare, title_compare,
                        results_obj, to_path,
@@ -324,21 +324,21 @@ def save_compare_graph(start, end,
     
     common_args = {
         "list_colors_couple":[*colors_compare],
-        "list_labels":removed_obj,
+        "list_labels":suffix,
         
         "area_alpha":.3,
 
         "xlabel":"Generation",
 
-        "list_toplot_x":[x_values for _ in range(len(removed_obj))],
+        "list_toplot_x":[x_values for _ in range(len(suffix))],
         "show_area":True
     }
 
     graph_filled(
         ax=axs[0][0],
 
-        list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(removed_obj))],
+        list_toplot_y_main=[results_obj[k]["data"]["necessary adaptations (mean/std)"][0] for k in range(len(suffix))],
+        list_toplot_y_area=[results_obj[k]["data"]["necessary adaptations (mean/std)"][1] for k in range(len(suffix))],
 
         ylabel="Necessary adaptations\n(meand and std)",
         extr_y=(0, float('inf')),
@@ -346,14 +346,14 @@ def save_compare_graph(start, end,
         **common_args
     )
 
-    for k in range(len(removed_obj)):
+    for k in range(len(suffix)):
         raw_scores = results_obj[k]["new score (raw, mean_std)"][0]
 
         for i, x in enumerate(x_values[:len(raw_scores)]):
             axs[0][1].scatter([x for _ in range(len(raw_scores[i]))], raw_scores[i],
             color=colors_compare[k][0], alpha=.5)
 
-        axs[0][1].plot([], color=colors_compare[k][0], label=str(removed_obj[k]))
+        axs[0][1].plot([], color=colors_compare[k][0], label=str(suffix[k]))
 
     axs[0][1].set_xlabel("Generation")
     axs[0][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
@@ -363,8 +363,8 @@ def save_compare_graph(start, end,
     graph_filled(
         ax=axs[1][0],
 
-        list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(removed_obj))],
+        list_toplot_y_main=[results_obj[k]["data score"]["F0"][0] for k in range(len(suffix))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F0"][1] for k in range(len(suffix))],
 
         ylabel="F0",
         extr_y=(0, float('inf')),
@@ -375,8 +375,8 @@ def save_compare_graph(start, end,
     graph_filled(
         ax=axs[1][1],
 
-        list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(removed_obj))],
-        list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(removed_obj))],
+        list_toplot_y_main=[results_obj[k]["data score"]["F1"][0] for k in range(len(suffix))],
+        list_toplot_y_area=[results_obj[k]["data score"]["F1"][1] for k in range(len(suffix))],
 
         ylabel="F1",
         extr_y=(float('-inf'), 0),
@@ -390,7 +390,7 @@ def save_compare_graph(start, end,
     return {}
 
 
-def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, interval, to_path, score_lim=(10,-80)):
+def save_animation(inner_algo, colors_compare, end, results_obj, suffix, interval, to_path, score_lim=(10,-80)):
     """
     Saves an animation of the individual's scores
     """
@@ -398,7 +398,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
     
 
     results_obj = results_obj
-    removed_obj = removed_obj
+    suffix = suffix
 
     fig = plt.figure(figsize=(20,20), dpi=160)
 
@@ -406,8 +406,8 @@ def save_animation(inner_algo, colors_compare, end, results_obj, removed_obj, in
         print("Step {}/{}".format(i, end), end="\r")
         plt.clf()
 
-        RB = [plt.plot([], [], '+')[0] for obj in removed_obj]
-        for k, obj in enumerate(removed_obj):
+        RB = [plt.plot([], [], '+')[0] for obj in suffix]
+        for k, obj in enumerate(suffix):
             data_score = results_obj[k]["data score"]["raw scores"]
             scores = np.array([val for val in data_score[min(i, len(data_score)-1)] if val[-1] > float('-inf')])
 

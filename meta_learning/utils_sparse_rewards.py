@@ -65,7 +65,7 @@ def _mutate_prior_pop(n_offspring, parents, mutator, agent_factory,
 
 
 def ns_instance(sampler, population, mutator, inner_selector, make_ag,
-                G_inner, top_level_log, prefix_tuple, steps_after_solved):
+                G_inner, top_level_log, prefix_tuple, steps_after_solved, taskid):
     """
     problems are now sampled in the NS constructor
     """
@@ -92,7 +92,8 @@ def ns_instance(sampler, population, mutator, inner_selector, make_ag,
         initial_pop=[copy.deepcopy(x) for x in population],
         problem_sampler=sampler,
         top_level_log=top_level_log,
-        prefix_tuple=prefix_tuple)
+        prefix_tuple=prefix_tuple,
+        taskid=taskid)
 
     # do NS
     nov_estimator.log_dir = ns.log_dir_path
