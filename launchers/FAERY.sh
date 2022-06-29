@@ -1,4 +1,5 @@
 #!/bin/bash
+# Runs FAERY on local computer with specified parameters file
 
 # Path to parameter file, additionnal parameters
 PARAMS_PATH=/launchers/parameters/base_${1:-test}.params
