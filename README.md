@@ -44,7 +44,7 @@ To run a quick test and check that everything works, run the following command f
 During each meta-step, the solvers are saved as they are found in [results/data](./results/data). Then, the final evolution tables and meta-population's scores $f_0$ and $f_1$ are computed and saved for the given meta-step. Therefore, once the algorithm has ran, you should be able to extract and compile them as performance graphs or T-SNE plots by running the provided scripts in [extraction scripts](./results/) :
 
 <p float="left">
-  <img src="https://user-images.githubusercontent.com/49323355/176389285-8d4becf5-691e-4930-a28b-4bbbd1454c03.png" width="80%" />
+  <img src="https://user-images.githubusercontent.com/49323355/176389285-8d4becf5-691e-4930-a28b-4bbbd1454c03.png" width="79%" />
   <img src="https://user-images.githubusercontent.com/49323355/176389404-8d320a08-4801-4562-ab92-a5ed415d7044.png" width="20%" /> 
 </p>
 
