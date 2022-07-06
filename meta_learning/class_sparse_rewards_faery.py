@@ -53,7 +53,10 @@ class FAERY(ForSparseRewards):
         Returns the meta-scores of a given individual
         """
 
-        return [ind._useful_evolvability, -1 * ind._mean_adaptation_speed]
+        return [
+            ind.nb_solutions,
+            -ind.get_mean_adaptation_speed()
+        ]
     
     def _meta_learning(self, metadata, tmp_pop):
         """

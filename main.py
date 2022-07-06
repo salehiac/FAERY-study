@@ -19,6 +19,7 @@ import json
 
 from utils_main import init_main, get_parser
 from meta_learning.class_sparse_rewards_faery import FAERYNS, FAERYQD, FAERYRANDOM, FAERYRANDOM_COMPLETE
+from meta_learning.class_sparse_rewards_faery_augmented import FAERY_AUG_NS, FAERY_AUG_QD, FAERY_AUG_RANDOM, FAERY_AUG_RANDOM_COMPLETE
 
 
 # MAIN FILE USED TO RUN FAERY WITH GIVEN PARAMETERS
@@ -29,14 +30,15 @@ if __name__ == "__main__":
     train_sampler, test_sampler, agent_factory, top_level_log_root, resume_dict, experiment_config = init_main(args_obj)
 
     #  STARTING UP THE ALGORITHM
-    if args_obj.inner_algorithm.lower() == "qd":
-        algo_obj = FAERYQD
-    elif args_obj.inner_algorithm.lower() == "ns":
-        algo_obj = FAERYNS
-    elif args_obj.inner_algorithm.lower() == "random":
-        algo_obj = FAERYRANDOM
-    else:
-        algo_obj = FAERYRANDOM_COMPLETE
+    algo_req = args_obj.inner_algorithm.lower()
+    
+    list_algo = [FAERYNS, FAERYQD, FAERYRANDOM, FAERYRANDOM_COMPLETE] if "aug" not in algo_req \
+        else [FAERY_AUG_NS, FAERY_AUG_QD, FAERY_AUG_RANDOM, FAERY_AUG_RANDOM_COMPLETE]
+
+    if "ns" in algo_req:    algo_obj = list_algo[0]
+    elif "qd" in algo_req:  algo_obj = list_algo[1]
+    elif "random" in algo_req:  algo_obj = list_algo[2]
+    else:   algo_obj = list_algo[3]
 
     algo = algo_obj(pop_sz=args_obj.pop_size,
                     off_sz=args_obj.off_size,

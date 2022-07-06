@@ -36,54 +36,54 @@ class Agent(ABC):
         pass
 
     def __init__(self, idx):
-        self._fitness = None
-        self._behavior_descr = None
-        self._complete_trajs = None  # for debug and visualisation only
-        self._nov = None
         self._idx = idx
 
-        self._solved_task = False
-        self._task_info = {
-        }  # it can be useful (e.g. for meta-world) to store information about the task that the agent has solved
-        # as tasks are randomly sampled at runtime
         self._created_at_gen = -1  # to compute age
         self._parent_idx = -1  # hacky way of computing bd distance between parent and child
         self._root = -1  # to keep track of the root of an evolutionnary path
         self._bd_dist_to_parent_bd = -1
         self._age = -1
 
-        # only useful for meta-learning with FAERY
-        self._useful_evolvability = 0
-        self._mean_adaptation_speed = float("inf")
-        self._adaptation_speed_lst = []
-
-        self._sum_of_model_params = None  # for debug
-
-        self._last_eval_init_state = None
-        self._first_action = None
-
-    def reset_tracking_attrs(self):
+        self.reset()
+    
+    def reset(self):
+        
         self._fitness = None
         self._behavior_descr = None
         self._complete_trajs = None  # for debug and visualisation only
         self._nov = None
+        
 
         self._solved_task = False
-        self._task_info = {}
-        self._created_at_gen = -1
-        self._parent_idx = -1
-        self._root = -1
-        self._bd_dist_to_parent_bd = -1
-        self._age = -1
+        self._task_info = {
+        }  # it can be useful (e.g. for meta-world) to store information about the task that the agent has solved
+        # as tasks are randomly sampled at runtime
+        
 
-        self._useful_evolvability = 0
-        self._mean_adaptation_speed = float("inf")
-        self._adaptation_speed_lst = []
+        # only useful for meta-learning with FAERY
+        self.nb_solutions = 0
+        self.instance_to_adaptation_speeds = []
+        self.instance_to_nb_solutions = []
 
         self._sum_of_model_params = None  # for debug
 
         self._last_eval_init_state = None
         self._first_action = None
+    
+    def get_mean_adaptation_speed(self):
+        
+        all_speeds = np.concatenate(self.instance_to_adaptation_speeds)
+
+        if len(all_speeds) == 0:
+            return float("inf")
+        
+        return np.mean(all_speeds)
+    
+    def get_nb_solved_tasks(self):
+        return sum([k > 0 for k in self.instance_to_nb_solutions])
+    
+    def get_median_solutions_per_tasks(self):
+        return np.median(self.instance_to_nb_solutions)
 
 
 _non_lin_dict = {

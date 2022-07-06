@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
+import pickle
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -124,7 +125,7 @@ class ForSparseRewards(ABC):
             self.pop = self.resume_from_gen["init_pop"]
             assert len(self.pop) == self.pop_sz, "wrong initial popluation size"
             for x_i in range(self.pop_sz):
-                self.pop[x_i].reset_tracking_attrs()
+                self.pop[x_i].reset()
                 self.pop[x_i]._idx = x_i
                 self.pop[x_i]._parent_idx = -1
                 self.pop[x_i]._root = self.pop[x_i]._idx
@@ -171,7 +172,8 @@ class ForSparseRewards(ABC):
         #         self.G_inner,    # G_inner
         #         self.top_level_log,
         #         (type_run, outer_g),
-        #         self.steps_after_solved
+        #         self.steps_after_solved,
+        #         k,
         #     ) for k in range(nb_samples)
         # ]
         
@@ -187,7 +189,7 @@ class ForSparseRewards(ABC):
                 [self.top_level_log] * nb_samples,
                 [(type_run, outer_g)] * nb_samples,
                 [self.steps_after_solved] * nb_samples,
-                list(nb_samples)
+                list(range(nb_samples))
             )
         )
 
@@ -206,32 +208,35 @@ class ForSparseRewards(ABC):
         Updates the evolution table
         """
 
-        assert tmp_pop is not None, "tmp_pop should not be None" # Removed if tmp_pop is not None... want to make sure didn't break anything
+        assert tmp_pop is not None, "tmp_pop should not be None" # Removed if tmp_pop is not None...
 
         idx_to_individual = {x._idx: x for x in tmp_pop}
         
+        for x in tmp_pop:
+            x.nb_solutions = 0
+            x.instance_to_adaptation_speeds = [[]] * len(metadata)
+            x.instance_to_nb_solutions = [0] * len(metadata)
+
+        all_roots = {}
         for instance, (parents, solutions) in enumerate(metadata):
-            
-            # Uniquely retrieving the roots and their associated solvers
-            root_to_solvers, solver_to_depth = {}, {}
             for iteration, list_solutions in solutions.items():
                 for solver in list_solutions:
-                    if solver._root not in root_to_solvers:
-                        root_to_solvers[solver._root] = [solver]
-                    elif solver not in root_to_solvers[solver._root]:
-                        root_to_solvers[solver._root].append(solver)
-                    
-                    if solver not in solver_to_depth:
-                        solver_to_depth[solver] = iteration
-            
-            # Updating the roots' scores and the evolution table
-            for root in root_to_solvers:
-                root_ind, solvers = idx_to_individual[root], root_to_solvers[root]
-                root_ind._useful_evolvability = len(solvers)
-                root_ind._adaptation_speed_lst = [solver_to_depth[solver] for solver in solvers]
-                root_ind._mean_adaptation_speed = np.mean(root_ind._adaptation_speed_lst)
+                    root = solver._root
+                    all_roots.add(root)
 
-                evolution_table[idx_to_row[root], instance] = np.min(root_ind._adaptation_speed_lst)
+                    root_ind = idx_to_individual[root]
+
+                    root_ind.nb_solutions += 1
+                    root_ind.instance_to_nb_solutions[instance] += 1
+                    root_ind.instance_to_adaptation_speeds[instance].append(iteration)  
+        
+        for root in all_roots:
+            root_ind = idx_to_individual[root]
+            
+            for instance in range(len(metadata)):
+                evolution_table[idx_to_row[root], instance] = np.min(
+                    root_ind.instance_to_adaptation_speeds[instance]
+                )
 
     def _save_evolution_table(self, evolution_table, type_save, current_index):
         """
@@ -297,26 +302,15 @@ class ForSparseRewards(ABC):
                 # now the meta training part
                 self._meta_learning(metadata, tmp_pop)
 
-                # if save is True:
-                #     with open(
-                #         "{}/population_prior_{}".format(
-                #             self.top_level_log,
-                #             str(outer_g + self.starting_gen)
-                #         ),
-                #         "wb"
-                #     ) as fl:
-                #         pickle.dump(self.pop, fl)
-
-                # reset evolvability and adaptation stats
-                for ind in self.pop:
-                    ind._useful_evolvability = 0
-                    ind._mean_adaptation_speed = float("inf")
-                    ind._adaptation_speed_lst = []
+                if save is True:
+                    utils_misc.dump_pickle(
+                        "{}/population_prior_{}".format(self.top_level_log, str(outer_g + self.starting_gen)),
+                        self.pop
+                    )                
 
             if outer_g % self.test_freq == 0 and not disable_testing:
 
                 test_first = False
                 metadata = self._get_metadata(self.pop, "test", outer_g)
                 
-                # tmp_pop was set to None before.. can not see why now
                 self._make_evolution_table(metadata, tmp_pop, outer_g, "test", save)
