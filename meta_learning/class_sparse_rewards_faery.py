@@ -47,6 +47,8 @@ class FAERY(ForSparseRewards):
         self.inner_selector = None # To be set depending on used inner algorithm
 
         self.save_scores = save_scores
+
+        self.light_ind_type = deap.creator.LightIndividuals
     
     def _get_meta_objectives(self, ind):
         """
@@ -65,7 +67,7 @@ class FAERY(ForSparseRewards):
 
         light_pop = []
         for i in range(len(tmp_pop)):
-            light_pop.append(deap.creator.LightIndividuals())
+            light_pop.append(self.light_ind_type())
             light_pop[-1].fitness.setValues(
                 self._get_meta_objectives(tmp_pop[i])
             )

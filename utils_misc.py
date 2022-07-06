@@ -208,6 +208,11 @@ deap.creator.create("Fitness2d", deap.base.Fitness,
 deap.creator.create("LightIndividuals", list,
                     fitness=deap.creator.Fitness2d, ind_i=-1)
 
+deap.creator.create("Fitness3d", deap.base.Fitness,
+                    weights=(1.0, 1.0, 1.0,))
+deap.creator.create("LightIndividuals3D", list,
+                    fitness=deap.creator.Fitness3d, ind_i=-1)
+
 
 class NSGA2:
     """

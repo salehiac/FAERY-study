@@ -37,6 +37,8 @@ class FAERY_AUG(FAERY):
             kwargs["name_prefix"] = "FAERY_AUG"
 
         super().__init__(*args, **kwargs)
+
+        self.light_ind_type = deap.creator.LightIndividuals3D
     
     def _get_meta_objectives(self, ind):
         """
