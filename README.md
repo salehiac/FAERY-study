@@ -50,7 +50,7 @@ During each meta-step, the solvers are saved as they are found in [results/data]
 
 ## Set up the extraction
 
-In order to plot the above graphs, one needs to set up the scripts with the provided [.json files](./results/), the parameters of which are self explanatory. Please not that by setting some booleans, it is possible to enable the plotting of supplementary graphs, such as :
+In order to plot the above graphs, one needs to set up the scripts with the provided [.json files](./results/), the parameters of which are self explanatory. Please note that by setting some booleans, it is possible to enable the plotting of supplementary graphs, such as :
 
 - a comparison graph for data obtained with different parameters
 <p align="center">
