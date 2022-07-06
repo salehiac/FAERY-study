@@ -217,7 +217,7 @@ class ForSparseRewards(ABC):
             x.instance_to_adaptation_speeds = [[]] * len(metadata)
             x.instance_to_nb_solutions = [0] * len(metadata)
 
-        all_roots = {}
+        all_roots = set()
         for instance, (parents, solutions) in enumerate(metadata):
             for iteration, list_solutions in solutions.items():
                 for solver in list_solutions:
