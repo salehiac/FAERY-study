@@ -290,11 +290,23 @@ def save_lone_graph(path, basename, start, end,
         axs1_0_twinx.grid(True)
 
 
-        axs[1][1].boxplot(solution_per_task)
+        # axs[1][1].boxplot(solution_per_task)
         axs[1][1].set_xlabel("Generation")
-        axs[1][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
+        # axs[1][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
+        axs[1][1].set_ylabel("Proportion of solved environments")
         axs[1][1].grid(True)
 
+        axs[1][1].plot([
+            sum([int(k>0) for k in t]) / len(t)
+            for t in data["individuals that solved task"]
+        ], color="dodgerblue")
+
+        axs[1][1].plot(data_test["all steps"],
+        [
+            sum([int(k>0) for k in t]) / len(t)
+            for t in data_test["individuals that solved task"]
+        ], color="red")
+        axs[1][1].set_ylim(bottom=0)
 
         plt.suptitle(title.format(data_name))
         plt.savefig("{}/{}.png".format(to_path, save_basename.format(data_name)))
