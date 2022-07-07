@@ -216,7 +216,7 @@ class ForSparseRewards(ABC):
             x.instance_to_adaptation_speeds = [[] for _ in range(len(metadata))]
             x.instance_to_mutation_distance = [[] for _ in range(len(metadata))]
             
-        instances_to_roots = {set() for _ in range(len(metadata))}
+        instances_to_roots = [set() for _ in range(len(metadata))]
         for instance, (parents, solutions) in enumerate(metadata):
             for iteration, list_solutions in solutions.items():
                 for solver in list_solutions:
@@ -230,7 +230,7 @@ class ForSparseRewards(ABC):
                     root_ind.instance_to_adaptation_speeds[instance].append(iteration)
                     root_ind.instance_to_mutation_distance[instance].append(solver._distance_to_root)  
         
-        for instance, all_roots in instances_to_roots.items():
+        for instance, all_roots in enumerate(instances_to_roots):
             for root in all_roots:
                 root_ind = idx_to_individual[root]
                 
