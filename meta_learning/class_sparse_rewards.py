@@ -262,10 +262,10 @@ class ForSparseRewards(ABC):
 
         if type_run == "train":
             # evolution_table[i,j]=k means that agent i solves env j after (k mutations, l steps)
-            evolution_table = -1 * np.ones([len(tmp_pop), self.num_train_samples], 2)  
+            evolution_table = -1 * np.ones([len(tmp_pop), self.num_train_samples, 2])  
             idx_to_row = {tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
         elif type_run == "test":
-            evolution_table = -1 * np.ones([self.pop_sz, self.num_test_samples], 2)
+            evolution_table = -1 * np.ones([self.pop_sz, self.num_test_samples, 2])
             idx_to_row = {self.pop[i]._idx:i for i in range(len(self.pop))}
         else:
             raise ValueError("Unknown type of run")
