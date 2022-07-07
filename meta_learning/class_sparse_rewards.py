@@ -107,9 +107,6 @@ class ForSparseRewards(ABC):
         self.inner_selector = None
         self.mutator = None
 
-        self.evolution_tables_train = []
-        self.evolution_tables_test = []
-
     def _init_pop(self):
         """
         Initialize the population
@@ -130,6 +127,7 @@ class ForSparseRewards(ABC):
                 self.pop[x_i]._parent_idx = -1
                 self.pop[x_i]._root = self.pop[x_i]._idx
                 self.pop[x_i]._created_at_gen = -1
+                self.pop[x_i]._distance_to_root = 0
             self.starting_gen = self.resume_from_gen["gen"] + 1
 
         self.num_total_agents = self.pop_sz
@@ -214,9 +212,10 @@ class ForSparseRewards(ABC):
         
         for x in tmp_pop:
             x.nb_solutions = 0
-            x.instance_to_adaptation_speeds = [[]] * len(metadata)
             x.instance_to_nb_solutions = [0] * len(metadata)
-
+            x.instance_to_adaptation_speeds = [[] for _ in range(len(metadata))]
+            x.instance_to_mutation_distance = [[] for _ in range(len(metadata))]
+            
         all_roots = set()
         for instance, (parents, solutions) in enumerate(metadata):
             for iteration, list_solutions in solutions.items():
@@ -228,13 +227,17 @@ class ForSparseRewards(ABC):
 
                     root_ind.nb_solutions += 1
                     root_ind.instance_to_nb_solutions[instance] += 1
-                    root_ind.instance_to_adaptation_speeds[instance].append(iteration)  
+                    root_ind.instance_to_adaptation_speeds[instance].append(iteration)
+                    root_ind.instance_to_mutation_distance[instance].append(solver._distance_to_root)  
         
         for root in all_roots:
             root_ind = idx_to_individual[root]
             
             for instance in range(len(metadata)):
-                evolution_table[idx_to_row[root], instance] = np.min(
+                evolution_table[idx_to_row[root], instance, 0] = np.min(
+                    root_ind.instance_to_mutation_distance[instance]
+                )
+                evolution_table[idx_to_row[root], instance, 1] = np.min(
                     root_ind.instance_to_adaptation_speeds[instance]
                 )
 
@@ -243,9 +246,6 @@ class ForSparseRewards(ABC):
         Saving the evolution table
         type_save : "test" or "train"
         """
-
-        evolution_tables = self.evolution_tables_train if type_save == "train" else self.evolution_tables_test
-        evolution_tables.append(evolution_table)
 
         np.savez_compressed(
                 "{}/evolution_table_{}_{}".format(
@@ -261,11 +261,11 @@ class ForSparseRewards(ABC):
         """
 
         if type_run == "train":
-            # evolution_table[i,j]=k means that agent i solves env j after k mutations
-            evolution_table = -1 * np.ones([len(tmp_pop), self.num_train_samples])  
+            # evolution_table[i,j]=k means that agent i solves env j after (k mutations, l steps)
+            evolution_table = -1 * np.ones([len(tmp_pop), self.num_train_samples], 2)  
             idx_to_row = {tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
         elif type_run == "test":
-            evolution_table = -1 * np.ones([self.pop_sz, self.num_test_samples])
+            evolution_table = -1 * np.ones([self.pop_sz, self.num_test_samples], 2)
             idx_to_row = {self.pop[i]._idx:i for i in range(len(self.pop))}
         else:
             raise ValueError("Unknown type of run")

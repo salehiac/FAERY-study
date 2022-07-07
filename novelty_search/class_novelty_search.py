@@ -262,7 +262,7 @@ class NoveltySearch:
     def generate_new_agents(self, parents, generation: int):
 
         parents_as_list = [
-            (x._idx, x.get_flattened_weights(), x._root)
+            (x._idx, x.get_flattened_weights(), x._root, x._distance_to_root)
             for x in parents
         ]
 
@@ -275,7 +275,8 @@ class NoveltySearch:
             (
                 parents_as_list[i][0],
                 self.mutator(copy.deepcopy(parents_as_list[i][1])),
-                parents_as_list[i][2]
+                parents_as_list[i][2],
+                parents_as_list[i][3]
             ) for i in parents_to_mutate
         ]  # deepcopy is because of deap
 
@@ -293,7 +294,8 @@ class NoveltySearch:
             )
             mutated_ags[i]._created_at_gen = generation
             mutated_ags[i]._root = mutated_genotype[kept][2]
-
+            mutated_ags[i]._distance_to_root = mutated_genotype[kept][3] + 1
+            
         self.num_agent_instances += len(mutated_ags)
 
         for x in mutated_ags:

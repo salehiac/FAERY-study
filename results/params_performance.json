@@ -1,22 +1,22 @@
 {
     "start_end": {
-        "buttonpress":[0,150]
+        "assembly":[0,70]
     },
 
-    "path": "data/FAERY_buttonpress/", "basename": "FAERY_{}",
-    "suffix": [0,40,100,200,400],
-    "save_path": "Images/nostop",
+    "path": "data/fix/FAERY_assembly/", "basename": "FAERY_{}",
+    "suffix": [0, 1],
+    "save_path": "Images/fix",
     
-    "compare": true,
+    "compare": false,
     "animate": false,
 
-    "title_solo": "FAERY applied to {} on 70x150 steps\naverage over 45 tasks",
+    "title_solo": "FAERY applied to {} on 70x70 steps\naverage over 45 tasks",
     "title_compare": "Comparison {}",
     
     "save_basename_solo": "Results_{}",
     "save_basename_compare": "Results_compare_{}",
     
-    "score_lim": [20, -400],
+    "score_lim": [10, 10],
 
     "colors_adapt": ["dodgerblue", "lightskyblue"],
     "colors_adapt_test": ["crimson", "lightcoral"],

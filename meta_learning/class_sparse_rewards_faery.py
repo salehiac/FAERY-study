@@ -57,7 +57,7 @@ class FAERY(ForSparseRewards):
 
         return [
             ind.nb_solutions,
-            -ind.get_mean_adaptation_speed()
+            -ind.get_mean_mutation_distance()
         ]
     
     def _meta_learning(self, metadata, tmp_pop):

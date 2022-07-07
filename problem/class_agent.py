@@ -43,6 +43,7 @@ class Agent(ABC):
         self._root = -1  # to keep track of the root of an evolutionnary path
         self._bd_dist_to_parent_bd = -1
         self._age = -1
+        self._distance_to_root = 0
 
         self.reset()
     
@@ -64,6 +65,7 @@ class Agent(ABC):
         self.nb_solutions = 0
         self.instance_to_adaptation_speeds = []
         self.instance_to_nb_solutions = []
+        self.instance_to_mutation_distance = []
 
         self._sum_of_model_params = None  # for debug
 
@@ -78,6 +80,15 @@ class Agent(ABC):
             return float("inf")
         
         return np.mean(all_speeds)
+    
+    def get_mean_mutation_distance(self):
+
+        all_dist = np.concatenate(self.instance_to_mutation_distance)
+
+        if len(all_dist) == 0:
+            return float("inf")
+        
+        return np.mean(all_dist)
     
     def get_nb_solved_tasks(self):
         return sum([k > 0 for k in self.instance_to_nb_solutions])

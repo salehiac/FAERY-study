@@ -92,7 +92,7 @@ def get_evolution(path, name, start, end, prefix="train"):
 
     for k, filename in enumerate(["{}/evolution_table_{}_{}.npz".format(path+name,prefix,i) for i in range(start, end+1)]):
 
-        arr = read_file(filename, prefix=prefix)
+        arr = read_file(filename, prefix=prefix)[:, :, 1]
         if arr is None:
             if prefix == "train":   
                 print("Could not read", filename, "stopping here for current graph.")
@@ -434,6 +434,7 @@ def save_animation(inner_algo, colors_compare, end, results_obj, suffix, interva
 
             x = [val[0] for val in scores]
             y = [val[1] for val in scores]
+            print(x,y)
             
             RB[k].set_data(x, y)
             RB[k].set_label(str(obj))
