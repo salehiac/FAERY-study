@@ -164,7 +164,7 @@ class ESMAML(ABC):
 
             all_values = list(
                 futures.map(
-                    self._get_reward,
+                    lambda task, vector: ESMAML._get_reward(self, task, vector),
                     random_tasks,
                     random_vectors
                 )
