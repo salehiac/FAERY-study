@@ -115,7 +115,7 @@ class ESMAML(ABC):
         Tests the policy
         """
 
-        random_tasks = [self.test_sampler(num_samples=1) for _ in range(self.num_test_samples)]
+        random_tasks = [self.test_sampler(num_samples=1)[0] for _ in range(self.num_test_samples)]
 
         all_results = list(
             futures.map(
@@ -150,7 +150,7 @@ class ESMAML(ABC):
             print("Outer g : {}/{}".format(outer_g, self.G_outer))
 
             size = len(self.theta.get_flattened_weights())
-            random_tasks = [self.train_sampler(num_samples=1) for _ in range(self.num_train_samples)]
+            random_tasks = [self.train_sampler(num_samples=1)[0] for _ in range(self.num_train_samples)]
             random_vectors = [np.random.normal(size=size) for _ in range(self.num_train_samples)]
 
             all_values = list(
