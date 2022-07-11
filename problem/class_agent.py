@@ -235,3 +235,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
 
     def get_genotype_len(self):
         return get_num_number_params(self, trainable_only=True)
+    
+    def __add__(self, other):
+        self.set_flattened_weights(self.get_flattened_weights() + other)
+        return self

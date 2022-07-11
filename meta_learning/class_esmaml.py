@@ -157,8 +157,9 @@ class ESMAML:
         for outer_g in range(self.G_outer):
             print("Outer g : {}/{}".format(outer_g, self.G_outer))
 
+            size = len(self.theta.get_flattened_weights())
             random_tasks = [self.train_sampler(num_samples=1) for _ in range(self.num_train_samples)]
-            random_vectors = [np.random.normal(size=self.theta.shape) for _ in range(self.num_train_samples)]
+            random_vectors = [np.random.normal(size=size) for _ in range(self.num_train_samples)]
 
             all_values = list(
                 futures.map(
@@ -168,7 +169,7 @@ class ESMAML:
                 )
             )
 
-            self.theta += self.beta / self.sigma * sum([all_values[i] * random_vectors[i] for i in range(self.num_train_samples)]) / self.num_train_samples
+            self.theta = self.theta + self.beta / self.sigma * sum([all_values[i] * random_vectors[i] for i in range(self.num_train_samples)]) / self.num_train_samples
 
             if save is True:
                 utils_misc.dump_pickle(
