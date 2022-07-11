@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 
+from abc import ABC
 from termcolor import colored
 from scoop import futures
 
@@ -11,7 +12,7 @@ from meta_learning.utils_maml import es_grad
 
 
 # NEED TO ADD TESTING GRADIENT STEPS?
-class ESMAML:
+class ESMAML(ABC):
     """
     Implementation of Zero-Order ES-MAML with ES Gradient Adaptation for Meta-world
     """
