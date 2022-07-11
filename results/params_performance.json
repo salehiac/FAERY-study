@@ -1,11 +1,11 @@
 {
     "start_end": {
-        "assembly":[0,70]
+        "buttonpress":[0,300]
     },
 
-    "path": "data/fix/FAERY_assembly/", "basename": "FAERY_{}",
-    "suffix": [0, 1],
-    "save_path": "Images/fix",
+    "path": "data/FAERY_buttonpress/", "basename": "FAERY_{}",
+    "suffix": [0],
+    "save_path": "Images/",
     
     "compare": false,
     "animate": false,

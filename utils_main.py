@@ -87,10 +87,36 @@ def get_parser():
     parser.add_argument(
         "--test_freq",
         type=int,
-        help="frequency of testing",
+        help="",
         default=5
     )
 
+    # ESMAML Parameters
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        help="adaptation step_size (weighting random vectors)",
+        default=5e-2
+    )
+    parser.add_argument(
+        "--beta",
+        type=float,
+        help="meta step size (weighting theta adjustments)",
+        default=1e-2
+    )
+    parser.add_argument(
+        "--K",
+        type=int,
+        help="number of queries for each task (inside ES Grad)",
+        default=5
+    )
+    parser.add_argument(
+        "--sigma",
+        type=float,
+        help="precision of gradient",
+        default=1e-1
+    )
+    
     return parser
 
 

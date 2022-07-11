@@ -92,12 +92,15 @@ def get_evolution(path, name, start, end, prefix="train"):
 
     for k, filename in enumerate(["{}/evolution_table_{}_{}.npz".format(path+name,prefix,i) for i in range(start, end+1)]):
 
-        arr = read_file(filename, prefix=prefix)[:, :, 1]
+        arr = read_file(filename, prefix=prefix)
         if arr is None:
             if prefix == "train":   
                 print("Could not read", filename, "stopping here for current graph.")
                 break
             continue
+        elif len(arr.shape) == 3:
+            arr = arr[:, :, 1]
+
         list_steps.append(k)
 
         list_nb_solved_ind.append([len(l[np.where(l>=0)]) for l in arr])

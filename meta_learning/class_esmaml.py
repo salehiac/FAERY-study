@@ -1,49 +1,84 @@
-import itertools
 import os
-import pickle
+
 import numpy as np
 
-from abc import ABC, abstractmethod
 from termcolor import colored
 from scoop import futures
-from itertools import product
 
 import utils_misc
+
 from meta_learning.utils_maml import es_grad
 
 
-class ESMAML(ABC):
+# NEED TO ADD TESTING GRADIENT STEPS?
+class ESMAML:
     """
-    ESMAML implementation for Meta-world
+    Implementation of Zero-Order ES-MAML with ES Gradient Adaptation for Meta-world
     """
 
     def __init__(self,
-                
-                 G_outer,
-                 alpha, beta, K, sigma,
-
-                 train_sampler,
-
-                 num_train_samples,
 
                  agent_factory,
 
+                 train_sampler,
+                 test_sampler,
+
+                 num_train_samples=50,
+                 num_test_samples=5,
+                 test_freq=1,
+
+                 G_outer=150,
+
+                 alpha=5e-2,
+                 beta=1e-2,
+                 K=5,
+                 sigma=1e-1,
+                 
+                 theta = None,
+
                  top_level_log_root="tmp/",
                  name_prefix="es-maml"):
+        """
+        agent_factory : initialize a policy (problem dependant)
+
+        train_sampler, test_sampler : tasks generators for training and testing (have to be callable)
+        /!\ samplers currently work with replacement
+
+        num_train_samples, num_test_samples : number of tasks to sample at each step (can influence algorithm performances)
+        test_freq : frequency of testing runs
+
+        G_outer : Number of steps to run ES-MAML for
+
+        alpha : adaptation step_size (weighting random vectors)
+        beta : meta step size (weighting theta adjustments)
+        K : number of queries for each task (inside ES Grad)
+        sigma : precision of gradient
         
-        self.alpha, self.beta, self.K, self.sigma, self.theta = alpha, beta, K, sigma, None
+        theta: initial policy (None will generate it with agent_factory)
+
+        top_level_log_root, name_prefix : saving parameters
+        """
+        
+        self.alpha = alpha
+        self.beta = beta
+        self.K = K
+        self.sigma = sigma
+        self.theta = theta
 
         self.G_outer = G_outer
 
         self.train_sampler = train_sampler
+        self.test_sampler = test_sampler
 
         self.num_train_samples = num_train_samples
+        self.num_test_samples = num_test_samples
 
         self.agent_factory = agent_factory
         
+        self.test_freq = test_freq
+        
         self.name_prefix = name_prefix
         self.folder_name = name_prefix + '_' + utils_misc.rand_string()
-
 
         if os.path.isdir(top_level_log_root):
             self.top_level_log = utils_misc.create_directory(
@@ -66,9 +101,6 @@ class ESMAML(ABC):
         else:
             raise Exception(f"tmp_dir ({top_level_log_root}) doesn't exist")
 
-        self.evolution_tables_train = []
-        self.evolution_tables_test = []
-
     def _init_theta(self):
         """
         Initialize the policy
@@ -76,17 +108,42 @@ class ESMAML(ABC):
 
         self.theta = self.agent_factory(0)
         self.starting_gen = 0
-    
-    def _get_reward_esgrad(self, task, random_vector):
+
+    def _get_reward(self, task, random_vector):
         """
-        Returns [...]
+        Returns the reward on a given task with a random pertubation on the current policy
+        Can be overriden to change gradient estimator, or the process all-together
         """        
 
         d = es_grad(task, self.theta + self.sigma * random_vector, self.K, self.sigma)
         return task(self.theta + self.sigma * random_vector + self.alpha * d)[0]
-        # STILL NEED TO GATHER METADATA FOR PLOTTING PURPOSES
+    
+    def test_policy(self, step, save=True):
+        """
+        Tests the policy
+        """
 
-    def __call__(self, save=True):
+        random_tasks = [self.test_sampler(num_samples=1) for _ in range(self.num_test_samples)]
+
+        all_results = list(
+            futures.map(
+                random_tasks,
+                [self.theta] * self.num_test_samples
+            )
+        )
+
+        to_save = [
+            (result[0], result[2]) #fitness, is_task_solved
+            for result in all_results
+        ]
+        
+        if save is True:
+            utils_misc.dump_pickle(
+                "{}/test_results_{}".format(self.top_level_log, str(step + self.starting_gen)),
+                to_save
+            )
+
+    def __call__(self, disable_testing=False, test_first=False, save=True):
         """
         Outer loop of the meta algorithm
         """
@@ -94,24 +151,30 @@ class ESMAML(ABC):
         if self.theta is None:
             self._init_theta()
 
+        if test_first is True:
+            self.test_policy(step=0, save=save)
+
         for outer_g in range(self.G_outer):
             print("Outer g : {}/{}".format(outer_g, self.G_outer))
-                
+
             random_tasks = [self.train_sampler(num_samples=1) for _ in range(self.num_train_samples)]
             random_vectors = [np.random.normal(size=self.theta.shape) for _ in range(self.n)]
 
             all_values = list(
                 futures.map(
-                    self._get_metadata,
+                    self._get_reward,
                     random_tasks,
                     random_vectors
                 )
             )
 
-            self.theta += self.beta / self.sigma * sum([all_values[i] * random_tasks[i] for i in range(self.num_train_samples)]) / self.num_train_samples
+            self.theta += self.beta / self.sigma * sum([all_values[i] * random_vectors[i] for i in range(self.num_train_samples)]) / self.num_train_samples
 
             if save is True:
                 utils_misc.dump_pickle(
                     "{}/policy_{}".format(self.top_level_log, str(outer_g + self.starting_gen)),
                     self.theta
-                )                
+                )
+
+            if outer_g % self.test_freq == 0 and not disable_testing:
+                self.test_policy(step=outer_g, save=save)

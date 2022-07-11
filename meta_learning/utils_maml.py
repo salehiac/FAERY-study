@@ -8,5 +8,5 @@ def es_grad(f, theta, n, sigma):
 
     return sum([
         f(theta + sigma * g)[0] * g
-        for g in [np.random.normal(size=theta.shape)]
+        for g in [np.random.normal(size=theta.shape) for _ in range(n)]
     ]) / (n * sigma)

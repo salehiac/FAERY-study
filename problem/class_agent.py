@@ -93,6 +93,9 @@ class Agent(ABC):
     def get_nb_solved_tasks(self):
         return sum([k > 0 for k in self.instance_to_nb_solutions])
     
+    def get_max_solutions_per_tasks(self):
+        return np.max(self.instance_to_nb_solutions)
+
     def get_median_solutions_per_tasks(self):
         return np.median(self.instance_to_nb_solutions)
 

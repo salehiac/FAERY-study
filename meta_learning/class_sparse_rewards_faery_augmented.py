@@ -47,7 +47,7 @@ class FAERY_AUG(FAERY):
 
         return [
             ind.get_nb_solved_tasks(),
-            ind.get_median_solutions_per_tasks(),
+            ind.get_max_solutions_per_tasks(),
             -ind.get_mean_mutation_distance()
         ]
 
