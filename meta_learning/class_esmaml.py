@@ -158,7 +158,7 @@ class ESMAML:
             print("Outer g : {}/{}".format(outer_g, self.G_outer))
 
             random_tasks = [self.train_sampler(num_samples=1) for _ in range(self.num_train_samples)]
-            random_vectors = [np.random.normal(size=self.theta.shape) for _ in range(self.n)]
+            random_vectors = [np.random.normal(size=self.theta.shape) for _ in range(self.num_train_samples)]
 
             all_values = list(
                 futures.map(
