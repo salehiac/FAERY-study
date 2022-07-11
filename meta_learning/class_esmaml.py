@@ -119,6 +119,7 @@ class ESMAML(ABC):
 
         all_results = list(
             futures.map(
+                lambda task, policy: task(policy),
                 random_tasks,
                 [self.theta] * self.num_test_samples
             )
