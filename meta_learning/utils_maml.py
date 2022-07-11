@@ -10,7 +10,7 @@ def es_grad(f, theta, n, sigma):
 
     return sum([
         f(theta + sigma * g)[0] * g
-        for g in [np.random.normal(size=theta.shape) for _ in range(n)]
+        for g in [np.random.normal(size=len(theta.get_flattened_weights())) for _ in range(n)]
     ]) / (n * sigma)
 
 
