@@ -8,7 +8,7 @@ from scoop import futures
 
 import utils_misc
 
-from meta_learning.utils_maml import es_grad
+from meta_learning.utils_maml import get_reward
 
 
 # NEED TO ADD TESTING GRADIENT STEPS?
@@ -109,15 +109,6 @@ class ESMAML(ABC):
 
         self.theta = self.agent_factory(0)
         self.starting_gen = 0
-
-    def _get_reward(self, task, random_vector):
-        """
-        Returns the reward on a given task with a random pertubation on the current policy
-        Can be overriden to change gradient estimator, or the process all-together
-        """        
-
-        d = es_grad(task, self.theta + self.sigma * random_vector, self.K, self.sigma)
-        return task(self.theta + self.sigma * random_vector + self.alpha * d)[0]
     
     def test_policy(self, step, save=True):
         """
@@ -164,7 +155,8 @@ class ESMAML(ABC):
 
             all_values = list(
                 futures.map(
-                    lambda task, vector: ESMAML._get_reward(self, task, vector),
+                    get_reward,
+                    [self] * self.num_train_samples,
                     random_tasks,
                     random_vectors
                 )
