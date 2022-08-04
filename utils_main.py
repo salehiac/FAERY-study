@@ -116,6 +116,12 @@ def get_parser():
         help="precision of gradient",
         default=1e-1
     )
+    parser.add_argument(
+        "--ablation",
+        type=int,
+        help="objective to ablate (the real scores will still be saved)",
+        default=-1
+    )
     
     return parser
 

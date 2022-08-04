@@ -77,7 +77,8 @@ if __name__ == "__main__":
                         test_freq=args_obj.test_freq,
                         steps_after_solved=args_obj.steps_after_solved,
                         top_level_log_root=top_level_log_root,
-                        resume_from_gen=resume_dict)
+                        resume_from_gen=resume_dict,
+                        ablation=args_obj.ablation)
                     
                     
     with open(algo.top_level_log + "/experiment_config", "w") as fl:

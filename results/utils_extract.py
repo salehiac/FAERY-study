@@ -129,9 +129,10 @@ def get_score(path, name, start, end):
     Retrieves the scores from the meta-scores at given path
     """
 
+    return_dict = {}
+
+    nb_scores = None
     list_raw_scores = []
-    list_mean_std_0 = [[], []]
-    list_mean_std_1 = [[], []]
     list_solved_one_task = []
     for filename in ["{}/meta-scores_train_{}.npz".format(path+name,i) for i in range(start, end+1)]:
 
@@ -143,27 +144,28 @@ def get_score(path, name, start, end):
         list_raw_scores.append(arr[:])
 
         arr = [val for val in arr if val[-1] > float('-inf')]
-        
+        nb_scores = len(arr[0])
+
         mean_scores = np.mean(arr, axis=0)
         std_scores = np.std(arr, axis=0)
 
-        list_mean_std_0[0].append(mean_scores[0])
-        list_mean_std_1[0].append(mean_scores[1])
-
-        list_mean_std_0[1].append(std_scores[0])
-        list_mean_std_1[1].append(std_scores[1])
+        for i in range(nb_scores):
+            score = "F{}".format(i)
+            if score not in return_dict.keys():
+                return_dict[score] = [[], []]
+            return_dict[score][0].append(mean_scores[i])
+            return_dict[score][1].append(std_scores[i])
 
         list_solved_one_task.append(len(arr) / init_len)
     
-    list_mean_std_0 = np.array(list_mean_std_0)
-    list_mean_std_1 = np.array(list_mean_std_1)
+    for i in range(nb_scores):
+        score = "F{}".format(i)
+        return_dict[score] = np.array(return_dict[score])
 
-    return {
-        "F0":list_mean_std_0,
-        "F1":list_mean_std_1,
-        "individuals that solved at least one task":list_solved_one_task,
-        "raw scores":list_raw_scores,
-    }
+    return_dict["individuals that solved at least one task"] = list_solved_one_task
+    return_dict["raw scores"] = list_raw_scores
+
+    return return_dict
     
 
 def save_lone_graph(path, basename, start, end,
@@ -203,7 +205,7 @@ def save_lone_graph(path, basename, start, end,
         
         list_raw_scores = data_score["raw scores"]
         list_nb_solved = data["tasks solved for each individual"]
-        len_learned = len(list_nb_solved)
+        nb_tasks = len(data_test["individuals that solved task"][0])
 
         solution_per_task = []
         solution_per_task_mean_std = [[],[]]
@@ -224,8 +226,10 @@ def save_lone_graph(path, basename, start, end,
         solution_per_task_mean_std[0] = np.array(solution_per_task_mean_std[0])
         solution_per_task_mean_std[1] = np.array(solution_per_task_mean_std[1])
 
-        fig, axs = plt.subplots(figsize=(24,18), nrows=2, ncols=2)
+        fig, axs = plt.subplots(figsize=(24,27), nrows=3, ncols=2)
 
+        # General plots on left side
+        #   Adaptation speed
         graph_filled(
             ax=axs[0][0],
             list_toplot_x=[data["all steps"], data_test["all steps"]],
@@ -241,43 +245,8 @@ def save_lone_graph(path, basename, start, end,
             ylabel="Necessary adaptations\n(meand and std)",       
         )
 
-        graph_filled(
-            ax=axs[0][1],
-            list_toplot_x=[data["all steps"]],
-            list_toplot_y_main=[data_score["F0"][0]],
-            list_toplot_y_area=[data_score["F0"][1]],
-            list_colors_couple=[colors_scores[0]],
-
-            extr_y=(0, float('inf')),
-
-            xlabel="Generation",
-            ylabel="F0",
-        )
-
-        axs[0][1].tick_params(axis='y', colors=colors_scores[0][0])
-        axs[0][1].yaxis.label.set_color(colors_scores[0][0])
-        
-        ax1_twinx = axs[0][1].twinx()
-        graph_filled(   
-            ax=ax1_twinx,
-            list_toplot_x=[data["all steps"]],
-            list_toplot_y_main=[data_score["F1"][0]],
-            list_toplot_y_area=[data_score["F1"][1]],
-            list_colors_couple=[colors_scores[1]],
-
-            extr_y=(float('-inf'), 0),
-            
-            xlabel="Generation",
-            ylabel="F1",       
-        )    
-
-        ax1_twinx.tick_params(axis='y', colors=colors_scores[1][0])
-        ax1_twinx.yaxis.label.set_color(colors_scores[1][0])
-
+        #   Specialization
         axs1_0_twinx = axs[1][0].twinx()
-        # for i, x in enumerate(data["all steps"]):
-        #     nb_solved = list_nb_solved[i]
-        #     axs[1][0].scatter([x for _ in range(len(nb_solved))], nb_solved, color=colors_solved[0])
         axs[1][0].boxplot(list_nb_solved)
         axs1_0_twinx.plot(data["all steps"], data_score["individuals that solved at least one task"], color=colors_solved[1])
 
@@ -292,24 +261,45 @@ def save_lone_graph(path, basename, start, end,
         axs[1][0].grid(True)
         axs1_0_twinx.grid(True)
 
+        #   Solving rate
+        axs[2][0].set_xlabel("Generation")
+        axs[2][0].set_ylabel("Proportion of solved environments")
+        axs[2][0].grid(True)
 
-        # axs[1][1].boxplot(solution_per_task)
-        axs[1][1].set_xlabel("Generation")
-        # axs[1][1].set_ylabel("Average number of solutions per solved tasks\n(specialization)")
-        axs[1][1].set_ylabel("Proportion of solved environments")
-        axs[1][1].grid(True)
-
-        axs[1][1].plot([
+        axs[2][0].plot([
             sum([int(k>0) for k in t]) / len(t)
             for t in data["individuals that solved task"]
         ], color="dodgerblue")
 
-        axs[1][1].plot(data_test["all steps"],
+        axs[2][0].plot(data_test["all steps"],
         [
             sum([int(k>0) for k in t]) / len(t)
             for t in data_test["individuals that solved task"]
         ], color="red")
-        axs[1][1].set_ylim(bottom=0)
+        axs[2][0].set_ylim(bottom=0)
+
+        # Scores on the right side
+        scores_extr = [(0, float('inf')), (float('-inf'), 0)] if len(scores[0]) == 2 \
+            else [(0, nb_tasks), (0, float('inf')), (float('-inf'), 0)]
+
+        for i in range(len(scores[0])):
+            score = "F{}".format(i)
+
+            graph_filled(
+                ax=axs[i][1],
+                list_toplot_x=[data["all steps"]],
+                list_toplot_y_main=[data_score[score][0]],
+                list_toplot_y_area=[data_score[score][1]],
+                list_colors_couple=[colors_scores[i]],
+
+                extr_y=scores_extr[i],
+
+                xlabel="Generation",
+                ylabel=score,
+            )
+
+            axs[i][1].tick_params(axis='y', colors=colors_scores[i][0])
+            axs[i][1].yaxis.label.set_color(colors_scores[i][0])        
 
         plt.suptitle(title.format(data_name))
         plt.savefig("{}/{}.png".format(to_path, save_basename.format(data_name)))

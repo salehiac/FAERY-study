@@ -31,7 +31,7 @@ class FAERY(ForSparseRewards):
     FAERY algorithm
     """
 
-    def __init__(self, *args, save_scores=True, **kwargs):
+    def __init__(self, *args, save_scores=True, ablation=-1, **kwargs):
         
         if "name_prefix" not in kwargs.keys():
             kwargs["name_prefix"] = "FAERY"
@@ -47,6 +47,7 @@ class FAERY(ForSparseRewards):
         self.inner_selector = None # To be set depending on used inner algorithm
 
         self.save_scores = save_scores
+        self.ablation = ablation
 
         self.light_ind_type = deap.creator.LightIndividuals
     
@@ -65,12 +66,20 @@ class FAERY(ForSparseRewards):
         Meta learning algorithm for FAERY
         """
 
+        do_ablation = None
         light_pop = []
         for i in range(len(tmp_pop)):
+            score = self._get_meta_objectives(tmp_pop[i])
+            
+            if do_ablation is True:
+                score = score[:self.ablation] + [0] + score[self.ablation+1:]
+            elif do_ablation is None:
+                do_ablation = (0 <= self.ablation) and (self.ablation < len(score))
+                if do_ablation is True:
+                    score = score[:self.ablation] + [0] + score[self.ablation+1:]
+
             light_pop.append(self.light_ind_type())
-            light_pop[-1].fitness.setValues(
-                self._get_meta_objectives(tmp_pop[i])
-            )
+            light_pop[-1].fitness.setValues(score)
             light_pop[-1].ind_i = i
 
         chosen_inds = [x.ind_i for x in deap.tools.selNSGA2(light_pop,
@@ -80,7 +89,7 @@ class FAERY(ForSparseRewards):
 
     def _save_meta_objectives(self, tmp_pop, current_index, type_run):
         """
-        Saves the meta objectives of the whole population
+        Saves the meta objectives of the whole population, without taking into account the ablation
         """
 
         np.savez_compressed(
