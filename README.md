@@ -4,6 +4,8 @@
 
 An implementation of the *FAERY* [[1]](#1) meta-learning algorithm for divergent search to the *Metaworld* benchmark [[2]](#2). Consists in a multi-objective optimization of a meta-population evaluated in a given number of evoluationary processes ran on parallelized environments.
 
+Full project report available here: [REPORT_ELRHARBI-FLEURY_YANNIS.pdf](https://github.com/salehiac/FAERY-study/files/9695863/RAPPORT_ELRHARBI-FLEURY_YANNIS.pdf)
+
 For a meta-individual $p_j \text{ evaluated on } M \text{ environments in which it produced the }\zeta_{ij}$ lineage, it is given two scores :
 
 <p align="center">
